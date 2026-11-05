@@ -4,147 +4,228 @@ import streamlit as st
 
 # Configuración de la página web
 st.set_page_config(
-    page_title="Control de Mantenimientos y Bitácora",
-    page_icon="🔧",
-    layout="wide",
+    page_title="Sistema de Gestión y Bitácoras", page_icon="🔧", layout="wide"
 )
 
-st.title("🔧 Sistema de Gestión y Mantenimiento de Moldes")
+st.title("🔧 Sistema Integral de Bitácoras y Mantenimiento")
 st.markdown("---")
 
-# Menú lateral para separar vistas
+# Menú lateral para separar los módulos principales
 menu = st.sidebar.selectbox(
-    "Selecciona el Módulo", ["Panel del Técnico (Reportes)", "Administración"]
+    "Selecciona el Módulo",
+    [
+        "Panel de Técnico / Departamento",
+        "Panel de Administración General",
+        "Diseñador de Formatos por Departamento",
+    ],
 )
 
-# Base de datos simulada en memoria (puedes ver y registrar al momento)
-if "bitacora" not in st.session_state:
-  st.session_state["bitacora"] = pd.DataFrame(
+# Inicializar Base de Datos General de Reportes en memoria
+if "bitacora_general" not in st.session_state:
+  st.session_state["bitacora_general"] = pd.DataFrame(
       columns=[
           "Fecha",
+          "Departamento",
           "Quien_Reporta",
-          "Maquina",
-          "Molde",
+          "Equipo_o_Zona",
           "Diagnostico",
           "Solucion",
           "Repuesto",
       ]
   )
 
-# ==========================================
-# 1. PANEL DEL TÉCNICO (Formulario de Uso)
-# ==========================================
-if menu == "Panel del Técnico (Reportes)":
-  st.header("📝 Registro de Mantenimiento y Uso en Máquina")
+# Inicializar Departamentos predeterminados y sus campos personalizados
+if "departamentos" not in st.session_state:
+  st.session_state["departamentos"] = [
+      "Moldes",
+      "Mantenimiento",
+      "Administración de Mantenimiento",
+  ]
+
+if "formatos_deptos" not in st.session_state:
+  st.session_state["formatos_deptos"] = {
+      "Moldes": ["Detalle de Talla", "Molde Afectado"],
+      "Mantenimiento": ["Tipo de Falla Eléctrica/Mecánica", "Tiempo Muerto"],
+      "Administración de Mantenimiento": ["Observación de Supervisor", "Costo"],
+  }
+
+
+# ==============================================================================
+# 1. DISEÑADOR DE FORMATOS (Para que tú crees los campos de cada departamento)
+# ==============================================================================
+if menu == "Diseñador de Formatos por Departamento":
+  st.header("🛠️ Creador y Diseñador de Formatos")
   st.write(
-      "Llena los siguientes datos tal como lo haces habitualmente en tu"
-      " bitácora:"
+      "Aquí puedes crear nuevos departamentos o agregar campos específicos"
+      " (preguntas) a los formatos existentes."
   )
 
-  with st.form("form_tecnico"):
+  tab1, tab2 = st.tabs(["Crear / Modificar Campos", "Crear Nuevo Departamento"])
+
+  with tab1:
+    depto_seleccionado = st.selectbox(
+        "Selecciona el Departamento a configurar",
+        st.session_state["departamentos"],
+    )
+    st.write(
+        f"Campos actuales para el formato de **{depto_seleccionado}**:"
+    )
+
+    # Mostrar campos actuales
+    campos_actuales = st.session_state["formatos_deptos"].get(
+        depto_seleccionado, []
+    )
+    for c in campos_actuales:
+      st.markdown(f"- 📌 {c}")
+
+    st.markdown("---")
+    nuevo_campo = st.text_input(
+        f"Agregar nuevo campo al formato de {depto_seleccionado}"
+    )
+    if st.button("Añadir Campo al Formato"):
+      if nuevo_campo and nuevo_campo not in campos_actuales:
+        st.session_state["formatos_deptos"][depto_seleccionado].append(
+            nuevo_campo
+        )
+        st.success(
+            f"¡Campo '{nuevo_campo}' agregado al formato de"
+            f" {depto_seleccionado}!"
+        )
+        st.rerun()
+
+  with tab2:
+    nuevo_depto = st.text_input("Nombre del nuevo Departamento (Ej. Calidad)")
+    if st.button("Crear Departamento"):
+      if nuevo_depto and nuevo_depto not in st.session_state["departamentos"]:
+        st.session_state["departamentos"].append(nuevo_depto)
+        st.session_state["formatos_deptos"][nuevo_depto] = [
+            "Observación General"
+        ]
+        st.success(f"¡Departamento '{nuevo_depto}' creado con éxito!")
+        st.rerun()
+
+
+# ==============================================================================
+# 2. PANEL DE TÉCNICO / DEPARTAMENTO (Formulario Dinámico según el depto)
+# ==============================================================================
+elif menu == "Panel de Técnico / Departamento":
+  st.header("📝 Registro de Reporte por Departamento")
+
+  depto_activo = st.selectbox(
+      "Selecciona tu Departamento", st.session_state["departamentos"]
+  )
+  st.info(f"Estás llenando el formato correspondiente a: **{depto_activo}**")
+
+  with st.form(f"form_{depto_activo}"):
     col1, col2 = st.columns(2)
 
     with col1:
       fecha = st.date_input("Fecha del reporte", value=datetime.today())
-      quien_reporta = st.selectbox(
-          "Quién reporta",
-          [
-              "Ismael Reyes",
-              "Axel Castellanos",
-              "Isaac Reyes",
-              "Jonnathan Alberto",
-              "Arnold",
-          ],
-      )
-      maquina = st.selectbox(
-          "Equipo / Máquina",
-          [
-              "Maquina 1",
-              "Maquina 9",
-              "Maquina 10",
-              "Maquina 11",
-              "Maquina 12",
-              "Maquina 13",
-          ],
-      )
+      quien_reporta = st.text_input("Nombre de quien reporta")
+      equipo_zona = st.text_input("Máquina / Zona / Área afectada")
 
     with col2:
-      molde = st.text_input(
-          "Detalle de Talla / Molde (Ej. G1437 - Se bajó talla 38 y se subió"
-          " 41)"
-      )
-      diagnostico = st.selectbox(
-          "Diagnóstico / Tipo de Falla",
-          [
-              "Problema con Guia",
-              "Problema con valvulas",
-              "Defecto en Imagen",
-              "Tornillo roto",
-              "Mantenimiento Preventivo",
-              "Otro",
-          ],
-      )
-      repuesto = st.selectbox(
-          "Repuesto o Insumos utilizados",
-          ["Ninguno", "Gas", "Oxigeno", "Válvulas", "Tornillos", "Buffe"],
-      )
+      diagnostico = st.text_area("Diagnóstico / Descripción del problema")
+      solucion = st.text_area("Solución aplicada / Trabajo realizado")
+      repuesto = st.text_input("Repuestos o materiales utilizados (Opcional)")
 
-    solucion = st.text_area(
-        "Descripción del Trabajo Realizado / Solución"
+    # Cargar dinámicamente los campos extra que creaste para este departamento
+    respuestas_extras = {}
+    campos_configurados = st.session_state["formatos_deptos"].get(
+        depto_activo, []
     )
 
-    submit_btn = st.form_submit_button("Guardar Reporte en el Sistema")
+    if campos_configurados:
+      st.markdown("---")
+      st.subheader(f"📋 Campos específicos de {depto_activo}")
+      for campo in campos_configurados:
+        respuestas_extras[campo] = st.text_input(f"Dato requerido: [{campo}]")
 
-    if submit_btn:
-      nueva_fila = pd.DataFrame({
-          "Fecha": [str(fecha)],
-          "Quien_Reporta": [quien_reporta],
-          "Maquina": [maquina],
-          "Molde": [molde],
-          "Diagnostico": [diagnostico],
-          "Solucion": [solucion],
-          "Repuesto": [repuesto],
-      })
+    enviar = st.form_submit_button("Guardar Reporte del Departamento")
 
-      st.session_state["bitacora"] = pd.concat(
-          [st.session_state["bitacora"], nueva_fila], ignore_index=True
-      )
-      st.success("¡Reporte guardado exitosamente en el sistema!")
+    if enviar:
+      if not quien_reporta or not equipo_zona:
+        st.error(
+            "Por favor, completa al menos tu nombre y la máquina/zona afectada."
+        )
+      else:
+        # Armar la fila con la estructura general
+        fila_datos = {
+            "Fecha": str(fecha),
+            "Departamento": depto_activo,
+            "Quien_Reporta": quien_reporta,
+            "Equipo_o_Zona": equipo_zona,
+            "Diagnostico": diagnostico,
+            "Solucion": solucion,
+            "Repuesto": (
+                repuesto if repuesto else "Ninguno"
+            ),
+        }
+        # Agregar los valores de los campos personalizados del depto
+        for k, v in respuestas_extras.items():
+          fila_datos[k] = v
 
-# ==========================================
-# 2. PANEL DE ADMINISTRACIÓN (Gestión)
-# ==========================================
-elif menu == "Administración":
-  st.header("📊 Panel de Administración y Planificación")
+        nueva_fila_df = pd.DataFrame([fila_datos])
+        st.session_state["bitacora_general"] = pd.concat(
+            [st.session_state["bitacora_general"], nueva_fila_df],
+            ignore_index=True,
+            sort=False,
+        )
+        st.success(
+            f"¡Reporte de {depto_activo} guardado exitosamente en el sistema!"
+        )
 
-  df_registros = st.session_state["bitacora"]
 
-  if df_registros.empty:
+# ==============================================================================
+# 3. PANEL DE ADMINISTRACIÓN GENERAL (Ver todo centralizado)
+# ==============================================================================
+elif menu == "Panel de Administración General":
+  st.header("📊 Panel de Administración y Control Central")
+
+  df_total = st.session_state["bitacora_general"]
+
+  if df_total.empty:
     st.info(
-        "Aún no hay reportes registrados en esta sesión. Ve al 'Panel del"
-        " Técnico' para hacer una prueba."
+        "Aún no hay reportes registrados en ningún departamento. Usa el panel"
+        " de técnico para registrar algunos."
     )
   else:
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total de Registros", len(df_registros))
-    c2.metric(
-        "Reportes con Repuestos",
-        len(df_registros[df_registros["Repuesto"] != "Ninguno"]),
+    # Métricas generales arriba
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("Total de Reportes", len(df_total))
+    col_m2.metric(
+        "Departamentos Activos", df_total["Departamento"].nunique()
     )
-    c3.metric(
-        "Máquinas Registradas", df_registros["Maquina"].nunique()
-    )
+    col_m3.metric("Áreas/Máquinas Atendidas", df_total["Equipo_o_Zona"].nunique())
 
     st.markdown("---")
-    st.subheader("Historial Completo de Mantenimientos")
+    st.subheader("Filtro y Control de Historial")
 
-    maquina_filtro = st.selectbox(
-        "Filtrar por Máquina", ["Todas"] + list(df_registros["Maquina"].unique())
+    # Filtro por departamento en administración
+    filtro_depto = st.selectbox(
+        "Filtrar vista por Departamento",
+        ["Todos los Departamentos"] + list(st.session_state["departamentos"]),
     )
 
-    if maquina_filtro != "Todas":
-      df_filtrado = df_registros[df_registros["Maquina"] == maquina_filtro]
+    if filtro_depto != "Todos los Departamentos":
+      df_vista = df_total[df_total["Departamento"] == filtro_depto]
     else:
-      df_filtrado = df_registros
+      df_vista = df_total
 
-    st.dataframe(df_filtrado, use_container_width=True)
+    # Mostrar la tabla interactiva con todos los reportes y columnas creadas
+    st.dataframe(df_vista, use_container_width=True)
+
+    st.markdown("---")
+    if st.button("⚠️ Borrar toda la base de datos de reportes"):
+      st.session_state["bitacora_general"] = pd.DataFrame(
+          columns=[
+              "Fecha",
+              "Departamento",
+              "Quien_Reporta",
+              "Equipo_o_Zona",
+              "Diagnostico",
+              "Solucion",
+              "Repuesto",
+          ]
+      )
+      st.rerun()
