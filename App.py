@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("🔧 Reportes de Fallas de Maquinas C.H")
+st.title("🔧 Sistema Integral de Reportes de Fallas C.H")
 st.markdown("---")
 
 # Menú lateral para navegar entre módulos
@@ -42,7 +42,7 @@ if "bitacora_general" not in st.session_state:
       ]
   )
 
-# Departamentos y sus campos configurables
+# Departamentos y estructura avanzada de formatos (con tipo de dato y opciones)
 if "departamentos" not in st.session_state:
   st.session_state["departamentos"] = [
       "Departamento de Mantenimiento CH",
@@ -50,64 +50,157 @@ if "departamentos" not in st.session_state:
       "Administración",
   ]
 
-if "formatos_deptos" not in st.session_state:
-  st.session_state["formatos_deptos"] = {
-      "Departamento de Mantenimiento CH": ["Portamolde", "Tiempo Muerto"],
-      "Moldes": ["Molde Afectado", "Detalle de Talla"],
-      "Administración": ["Costo Operativo", "Supervisor a Cargo"],
+if "formatos_deptos_avanzado" not in st.session_state:
+  st.session_state["formatos_deptos_avanzado"] = {
+      "Departamento de Mantenimiento CH": [
+          {
+              "nombre": "Portamolde",
+              "tipo": "Desplegable",
+              "opciones": "Portalmolde 1, Portalmolde 2, Portalmolde 3, N.A",
+          },
+          {
+              "nombre": "Tiempo Muerto",
+              "tipo": "Texto Corto",
+              "opciones": "",
+          },
+      ],
+      "Moldes": [
+          {
+              "nombre": "Molde Afectado",
+              "tipo": "Texto Corto",
+              "opciones": "",
+          },
+          {
+              "nombre": "Detalle de Talla",
+              "tipo": "Texto Corto",
+              "opciones": "",
+          },
+      ],
+      "Administración": [
+          {
+              "nombre": "Costo Operativo",
+              "tipo": "Texto Corto",
+              "opciones": "",
+          },
+          {
+              "nombre": "Supervisor a Cargo",
+              "tipo": "Texto Corto",
+              "opciones": "",
+          },
+      ],
   }
 
 
 # ==============================================================================
-# 1. DISEÑADOR DE FORMATOS
+# 1. DISEÑADOR DE FORMATOS (Crear, configurar tipos de datos y botones/opciones)
 # ==============================================================================
 if menu == "Diseñador de Formatos por Departamento":
-  st.header("🛠️ Diseñador y Gestor de Formatos")
+  st.header("🛠️ Diseñador Avanzado de Formatos")
   st.write(
-      "Agrega o elimina campos personalizados para cada departamento según tus"
-      " necesidades."
+      "Visualiza todos los formatos creados, añade nuevos campos eligiendo su"
+      " tipo de dato y configura opciones predeterminadas."
   )
 
-  tab1, tab2 = st.tabs(["Gestionar Campos", "Crear Nuevo Departamento"])
+  tab1, tab2, tab3 = st.tabs(
+      [
+          "📋 Ver y Gestionar Formatos",
+          "➕ Agregar Nuevo Campo",
+          "🏢 Crear Departamento",
+      ]
+  )
 
   with tab1:
     depto_sel = st.selectbox(
-        "Selecciona el Departamento", st.session_state["departamentos"]
+        "Selecciona el Departamento para ver su formato",
+        st.session_state["departamentos"],
+        key="ver_depto",
     )
-    st.write(f"Campos actuales en **{depto_sel}**:")
+    st.subheader(f"Estructura actual del formato: {depto_sel}")
 
-    campos_act = st.session_state["formatos_deptos"].get(depto_sel, [])
-    for c in campos_act:
-      st.markdown(f"- 📌 {c}")
+    campos_actuales = st.session_state["formatos_deptos_avanzado"].get(
+        depto_sel, []
+    )
 
-    st.markdown("---")
-    nuevo_c = st.text_input(f"Nuevo campo para {depto_sel}")
-    if st.button("Añadir Campo"):
-      if nuevo_c and nuevo_c not in campos_act:
-        st.session_state["formatos_deptos"][depto_sel].append(nuevo_c)
-        st.success(f"¡Campo '{nuevo_c}' agregado!")
-        st.rerun()
+    if campos_actuales:
+      for idx, campo in enumerate(campos_actuales):
+        with st.expander(
+            f"📌 Campo {idx + 1}: {campo['nombre']} ({campo['tipo']})"
+        ):
+          st.write(f"**Tipo de Dato:** {campo['tipo']}")
+          if campo["opciones"]:
+            st.write(f"**Opciones / Botones:** {campo['opciones']}")
+          else:
+            st.write("**Opciones / Botones:** Campo de entrada libre")
 
-    if campos_act:
-      st.markdown("---")
-      a_borrar = st.selectbox("Campo a eliminar", campos_act)
-      if st.button("Eliminar Campo"):
-        st.session_state["formatos_deptos"][depto_sel].remove(a_borrar)
-        st.warning(f"Se eliminó el campo '{a_borrar}'.")
-        st.rerun()
+          if st.button(f"Eliminar este campo", key=f"del_{depto_sel}_{idx}"):
+            st.session_state["formatos_deptos_avanzado"][depto_sel].pop(idx)
+            st.warning(f"¡Campo '{campo['nombre']}' eliminado con éxito!")
+            st.rerun()
+    else:
+      st.info("Este departamento no tiene campos personalizados configurados.")
 
   with tab2:
-    nuevo_d = st.text_input("Nombre del nuevo Departamento")
-    if st.button("Crear Departamento"):
+    st.subheader("Añadir un nuevo campo con opciones predeterminadas")
+    depto_agregar = st.selectbox(
+        "Departamento al que deseas agregar el campo",
+        st.session_state["departamentos"],
+        key="agregar_depto",
+    )
+
+    nombre_campo = st.text_input("Nombre de la Pregunta / Campo")
+    tipo_dato = st.selectbox(
+        "Selecciona el Tipo de Dato",
+        [
+            "Texto Corto",
+            "Texto Largo (Párrafo)",
+            "Desplegable (Opciones/Botones)",
+            "Fecha",
+        ],
+    )
+
+    opciones_campo = ""
+    if tipo_dato == "Desplegable (Opciones/Botones)":
+      opciones_campo = st.text_area(
+          "Escribe las opciones separadas por comas (Ej: Opción 1, Opción 2,"
+          " Opción 3)"
+      )
+
+    if st.button("Guardar e Integrar al Formato"):
+      if nombre_campo:
+        nuevo_item = {
+            "nombre": nombre_campo,
+            "tipo": tipo_dato,
+            "opciones": opciones_campo,
+        }
+        if depto_agregar not in st.session_state["formatos_deptos_avanzado"]:
+          st.session_state["formatos_deptos_avanzado"][depto_agregar] = []
+
+        st.session_state["formatos_deptos_avanzado"][depto_agregar].append(
+            nuevo_item
+        )
+        st.success(
+            f"¡El campo '{nombre_campo}' fue agregado exitosamente al"
+            f" formato de {depto_agregar}!"
+        )
+        st.rerun()
+      else:
+        st.error("Por favor, ingresa el nombre del campo.")
+
+  with tab3:
+    st.subheader("Crear un nuevo departamento")
+    nuevo_d = st.text_input(
+        "Nombre del nuevo Departamento (Ej. Control de Calidad)"
+    )
+    if st.button("Registrar Departamento"):
       if nuevo_d and nuevo_d not in st.session_state["departamentos"]:
         st.session_state["departamentos"].append(nuevo_d)
-        st.session_state["formatos_deptos"][nuevo_d] = ["Observación General"]
-        st.success(f"¡Departamento '{nuevo_d}' creado!")
+        st.session_state["formatos_deptos_avanzado"][nuevo_d] = []
+        st.success(f"¡Departamento '{nuevo_d}' creado con éxito!")
         st.rerun()
 
 
 # ==============================================================================
-# 2. PANEL DE TÉCNICO (Formulario idéntico a tu Google Form)
+# 2. PANEL DE TÉCNICO (Formulario Dinámico Inteligente)
 # ==============================================================================
 elif menu == "Panel de Técnico (Reporte de Falla)":
   st.header("📝 Registro de Reporte de Fallas")
@@ -213,14 +306,35 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
           "Observaciones o sugerencias sobre fallas futuras"
       )
 
-    # Campos dinámicos extras creados por el administrador
-    extras = {}
-    cfg = st.session_state["formatos_deptos"].get(depto_activo, [])
-    if cfg:
+    # Renderizar dinámicamente los campos avanzados creados en el Diseñador
+    respuestas_dinamicas = {}
+    config_campos = st.session_state["formatos_deptos_avanzado"].get(
+        depto_activo, []
+    )
+
+    if config_campos:
       st.markdown("---")
-      st.subheader(f"📋 Campos específicos para {depto_activo}")
-      for fld in cfg:
-        extras[fld] = st.text_input(f"Dato requerido: [{fld}]")
+      st.subheader(f"📋 Campos específicos configurados para {depto_activo}")
+      for campo in config_campos:
+        nombre_c = campo["nombre"]
+        tipo_c = campo["tipo"]
+        ops_c = campo["opciones"]
+
+        if tipo_c == "Texto Corto":
+          respuestas_dinamicas[nombre_c] = st.text_input(f"{nombre_c}")
+        elif tipo_c == "Texto Largo (Párrafo)":
+          respuestas_dinamicas[nombre_c] = st.text_area(f"{nombre_c}")
+        elif tipo_c == "Desplegable (Opciones/Botones)":
+          lista_opciones = (
+              [op.strip() for op in ops_c.split(",")] if ops_c else ["N/A"]
+          )
+          respuestas_dinamicas[nombre_c] = st.selectbox(
+              f"{nombre_c}", lista_opciones
+          )
+        elif tipo_c == "Fecha":
+          respuestas_dinamicas[nombre_c] = str(
+              st.date_input(f"{nombre_c}", value=datetime.today())
+          )
 
     enviar = st.form_submit_button("Enviar Reporte")
 
@@ -243,7 +357,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             "Hora_Final": hora_final,
             "Observaciones": observaciones,
         }
-        for k, v in extras.items():
+        for k, v in respuestas_dinamicas.items():
           fila[k] = v
 
         st.session_state["bitacora_general"] = pd.concat(
