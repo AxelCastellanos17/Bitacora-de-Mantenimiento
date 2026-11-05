@@ -34,7 +34,7 @@ if "bitacora_general" not in st.session_state:
       ]
   )
 
-# Inicializar Departamentos predeterminados y sus campos personalizados
+# Inicializar Departamentos predeterminados y sus campos específicos
 if "departamentos" not in st.session_state:
   st.session_state["departamentos"] = [
       "Moldes",
@@ -44,20 +44,20 @@ if "departamentos" not in st.session_state:
 
 if "formatos_deptos" not in st.session_state:
   st.session_state["formatos_deptos"] = {
-      "Moldes": ["Detalle de Talla", "Molde Afectado"],
+      "Moldes": ["Molde Afectado", "Detalle de Talla"],
       "Mantenimiento": ["Tipo de Falla Eléctrica/Mecánica", "Tiempo Muerto"],
       "Administración de Mantenimiento": ["Observación de Supervisor", "Costo"],
   }
 
 
 # ==============================================================================
-# 1. DISEÑADOR DE FORMATOS (Para que tú crees los campos de cada departamento)
+# 1. DISEÑADOR DE FORMATOS (Crear, modificar y borrar campos ordenadamente)
 # ==============================================================================
 if menu == "Diseñador de Formatos por Departamento":
   st.header("🛠️ Creador y Diseñador de Formatos")
   st.write(
-      "Aquí puedes crear nuevos departamentos o agregar campos específicos"
-      " (preguntas) a los formatos existentes."
+      "Aquí puedes crear nuevos departamentos o agregar/quitar campos de los"
+      " formatos."
   )
 
   tab1, tab2 = st.tabs(["Crear / Modificar Campos", "Crear Nuevo Departamento"])
@@ -71,12 +71,15 @@ if menu == "Diseñador de Formatos por Departamento":
         f"Campos actuales para el formato de **{depto_seleccionado}**:"
     )
 
-    # Mostrar campos actuales
     campos_actuales = st.session_state["formatos_deptos"].get(
         depto_seleccionado, []
     )
-    for c in campos_actuales:
-      st.markdown(f"- 📌 {c}")
+
+    if campos_actuales:
+      for c in campos_actuales:
+        st.markdown(f"- 📌 {c}")
+    else:
+      st.info("Este departamento no tiene campos extra configurados.")
 
     st.markdown("---")
     nuevo_campo = st.text_input(
@@ -93,6 +96,18 @@ if menu == "Diseñador de Formatos por Departamento":
         )
         st.rerun()
 
+    if campos_actuales:
+      st.markdown("---")
+      campo_a_borrar = st.selectbox(
+          "Selecciona un campo para ELIMINAR", campos_actuales
+      )
+      if st.button("Eliminar Campo Seleccionado"):
+        st.session_state["formatos_deptos"][depto_seleccionado].remove(
+            campo_a_borrar
+        )
+        st.warning(f"Se ha eliminado el campo '{campo_a_borrar}'.")
+        st.rerun()
+
   with tab2:
     nuevo_depto = st.text_input("Nombre del nuevo Departamento (Ej. Calidad)")
     if st.button("Crear Departamento"):
@@ -106,7 +121,7 @@ if menu == "Diseñador de Formatos por Departamento":
 
 
 # ==============================================================================
-# 2. PANEL DE TÉCNICO / DEPARTAMENTO (Formulario Dinámico según el depto)
+# 2. PANEL DE TÉCNICO / DEPARTAMENTO (Formulario Dinámico Único)
 # ==============================================================================
 elif menu == "Panel de Técnico / Departamento":
   st.header("📝 Registro de Reporte por Departamento")
@@ -129,7 +144,6 @@ elif menu == "Panel de Técnico / Departamento":
       solucion = st.text_area("Solución aplicada / Trabajo realizado")
       repuesto = st.text_input("Repuestos o materiales utilizados (Opcional)")
 
-    # Cargar dinámicamente los campos extra que creaste para este departamento
     respuestas_extras = {}
     campos_configurados = st.session_state["formatos_deptos"].get(
         depto_activo, []
@@ -149,7 +163,6 @@ elif menu == "Panel de Técnico / Departamento":
             "Por favor, completa al menos tu nombre y la máquina/zona afectada."
         )
       else:
-        # Armar la fila con la estructura general
         fila_datos = {
             "Fecha": str(fecha),
             "Departamento": depto_activo,
@@ -161,7 +174,6 @@ elif menu == "Panel de Técnico / Departamento":
                 repuesto if repuesto else "Ninguno"
             ),
         }
-        # Agregar los valores de los campos personalizados del depto
         for k, v in respuestas_extras.items():
           fila_datos[k] = v
 
@@ -190,7 +202,6 @@ elif menu == "Panel de Administración General":
         " de técnico para registrar algunos."
     )
   else:
-    # Métricas generales arriba
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("Total de Reportes", len(df_total))
     col_m2.metric(
@@ -201,7 +212,6 @@ elif menu == "Panel de Administración General":
     st.markdown("---")
     st.subheader("Filtro y Control de Historial")
 
-    # Filtro por departamento en administración
     filtro_depto = st.selectbox(
         "Filtrar vista por Departamento",
         ["Todos los Departamentos"] + list(st.session_state["departamentos"]),
@@ -212,7 +222,6 @@ elif menu == "Panel de Administración General":
     else:
       df_vista = df_total
 
-    # Mostrar la tabla interactiva con todos los reportes y columnas creadas
     st.dataframe(df_vista, use_container_width=True)
 
     st.markdown("---")
