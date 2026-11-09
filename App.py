@@ -237,21 +237,29 @@ elif menu == "Panel de Administración":
       )
 
   with col_a:
+    # Opción ampliada para aceptar Excel, CSV y Texto Plano (.txt)
     archivo_subido = st.file_uploader(
-        "📂 Abrir archivo Excel", type=["xlsx", "csv"]
+        "📂 Abrir archivo (Excel, CSV o Texto)", type=["xlsx", "csv", "txt"]
     )
     if archivo_subido is not None:
       try:
-        if archivo_subido.name.endswith(".csv"):
+        nombre_archivo = archivo_subido.name.lower()
+        if nombre_archivo.endswith(".csv"):
           st.session_state["bitacora_general"] = pd.read_csv(archivo_subido)
+        elif nombre_archivo.endswith(".txt"):
+          # Intenta leer archivos de texto tabulados o separados por comas
+          st.session_state["bitacora_general"] = pd.read_csv(
+              archivo_subido, sep=None, engine="python"
+          )
         else:
           st.session_state["bitacora_general"] = pd.read_excel(archivo_subido)
+
         st.success(
-            f"✅ Archivo abierto ({len(st.session_state['bitacora_general'])}"
-            " registros)"
+            f"✅ Archivo abierto con éxito"
+            f" ({len(st.session_state['bitacora_general'])} registros)"
         )
       except Exception as e:
-        st.error(f"Error al abrir: {e}")
+        st.error(f"Error al abrir el archivo: {e}")
 
   with col_b:
     st.write("🗑️ **Gestión de Datos**")
