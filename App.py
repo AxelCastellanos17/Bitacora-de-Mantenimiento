@@ -325,13 +325,55 @@ elif menu == "Panel de Administración":
     else:
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
-  # FILTROS AVANZADOS TIPO TABLA DINÁMICA
+  # ============================================================================
+  # FILTROS Y GRÁFICA PERSONALIZABLES (ESTILO TABLA DINÁMICA)
+  # ============================================================================
   st.markdown("---")
-  st.subheader("🔍 Filtros de Búsqueda y Gráfica")
+  st.subheader("🔍 Filtros de Búsqueda y Gráfica Dinámica")
 
   df_all = st.session_state["bitacora_general"]
 
-  # Primera fila de filtros (Departamento, Máquina, Quién Reporta)
+  # Controles para reordenar los filtros a tu gusto
+  with st.expander(
+      "⚙️ Configurar orden y campos de filtro (Estilo Tabla Dinámica)",
+      expanded=True,
+  ):
+    c_f1, c_f2, c_f3 = st.columns(3)
+    with c_f1:
+      f_principal = st.selectbox(
+          "Filtro Principal (Filas)",
+          [
+              "Maquina",
+              "Quien_Reporta",
+              "Turno",
+              "Departamento",
+              "Campo_Trabajo",
+          ],
+      )
+    with c_f2:
+      f_secundario = st.selectbox(
+          "Filtro Secundario",
+          [
+              "Turno",
+              "Quien_Reporta",
+              "Maquina",
+              "Departamento",
+              "Campo_Trabajo",
+          ],
+      )
+    with c_f3:
+      metrica_grafica = st.selectbox(
+          "Agrupar Gráfica por:",
+          [
+              "Maquina",
+              "Quien_Reporta",
+              "Turno",
+              "Campo_Trabajo",
+              "Departamento",
+          ],
+      )
+
+  # Selectores interactivos basados en tus selecciones
   f1, f2, f3 = st.columns(3)
   with f1:
     deptos = (
@@ -355,7 +397,6 @@ elif menu == "Panel de Administración":
     )
     f_tec = st.selectbox("Filtrar por Quién Reporta", tecnicos)
 
-  # Segunda fila de filtros (Turno, Campo de Trabajo y Buscador de Diagnóstico)
   f4, f5, f6 = st.columns(3)
   with f4:
     turnos_opts = (
@@ -374,7 +415,7 @@ elif menu == "Panel de Administración":
   with f6:
     f_diag = st.text_input("Buscar en Diagnóstico", "")
 
-  # Aplicar todos los filtros en cascada
+  # Aplicar filtros en cascada
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
     if f_dep != "Todos" and "Departamento" in df_view.columns:
@@ -397,11 +438,11 @@ elif menu == "Panel de Administración":
   st.dataframe(df_view, use_container_width=True)
 
   st.markdown("---")
-  st.subheader("📈 Estadísticas de Fallas por Máquina")
-  if not df_view.empty and "Maquina" in df_view.columns:
-    st.bar_chart(df_view["Maquina"].value_counts())
+  st.subheader("📈 Gráfica Interactiva (Dinámica)")
+  if not df_view.empty and metrica_grafica in df_view.columns:
+    st.bar_chart(df_view[metrica_grafica].value_counts())
   else:
-    df_cero = pd.DataFrame({"Máquinas": ["Sin datos"], "Cantidad": [0]}).set_index(
-        "Máquinas"
+    df_cero = pd.DataFrame({"Datos": ["Sin datos"], "Cantidad": [0]}).set_index(
+        "Datos"
     )
     st.bar_chart(df_cero)
