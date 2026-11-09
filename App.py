@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+import io
 import pandas as pd
 import streamlit as st
 
@@ -59,103 +60,80 @@ if "formatos_deptos_avanzado" not in st.session_state:
               "opciones": "Portalmolde 1, Portalmolde 2, N.A",
           },
       ],
-      "Moldes": [
-          {
-              "nombre": "Molde Afectado",
-              "tipo": "Texto Corto",
-              "opciones": "",
-          }
-      ],
+      "Moldes": [{"nombre": "Molde Afectado", "tipo": "Texto Corto", "opciones": ""}],
       "Administración": [
-          {
-              "nombre": "Costo Operativo",
-              "tipo": "Texto Corto",
-              "opciones": "",
-          }
+          {"nombre": "Costo Operativo", "tipo": "Texto Corto", "opciones": ""}
       ],
-  }
-
-# Almacenamiento temporal para las rutas o nombres de los archivos vinculados
-if "archivos_config" not in st.session_state:
-  st.session_state["archivos_config"] = {
-      "archivo_viejos": "",
-      "archivo_nuevos": "",
   }
 
 
 # ==============================================================================
-# 1. DISEÑADOR DE FORMATOS Y VINCULACIÓN DE ARCHIVOS
+# BARRA LATERAL: REPORTE RÁPIDO DE LA SEMANA (SÁBADO A SÁBADO)
+# ==============================================================================
+st.sidebar.markdown("---")
+st.sidebar.subheader("📢 Reportes de la Semana (Sáb - Sáb)")
+
+df_general = st.session_state["bitacora_general"]
+
+if not df_general.empty:
+  try:
+    df_general["Fecha_Dt"] = pd.to_datetime(df_general["Fecha"], errors="coerce")
+    hoy = datetime.today()
+
+    dias_hasta_sabado = (5 - hoy.weekday()) % 7
+    if dias_hasta_sabado == 0 and hoy.hour < 23:
+      sabado_inicio = hoy - timedelta(days=7)
+    else:
+      sabado_inicio = hoy - timedelta(days=(hoy.weekday() - 5) % 7)
+
+    sabado_inicio = sabado_inicio.replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    sabado_fin = sabado_inicio + timedelta(days=7)
+
+    df_semana = df_general[
+        (df_general["Fecha_Dt"] >= sabado_inicio)
+        & (df_general["Fecha_Dt"] < sabado_fin)
+    ]
+
+    if not df_semana.empty:
+      st.sidebar.write(
+          f"Del {sabado_inicio.strftime('%d/%m')} al"
+          f" {sabado_fin.strftime('%d/%m')}"
+      )
+      for idx, row in df_semana.tail(5).iterrows():
+        with st.sidebar.container():
+          st.markdown(
+              f"🛠️ **{row['Maquina']}** ({row['Departamento']})"
+              f"\n\n📝 *{row['Diagnostico']}*"
+              f"\n\n👤 *Rep: {row['Quien_Reporta']}* | 🕒 *{row['Fecha']}*"
+          )
+          st.markdown("---")
+    else:
+      st.sidebar.info("No hay reportes en este ciclo semanal.")
+  except:
+    st.sidebar.info("Registra fallas para activar el feed.")
+else:
+  st.sidebar.info("Esperando nuevos reportes...")
+
+
+# ==============================================================================
+# 1. DISEÑADOR DE FORMATOS
 # ==============================================================================
 if menu == "Diseñador de Formatos por Departamento":
-  st.header("🛠️ Diseñador y Gestión de Archivos y Formatos")
-  st.write(
-      "Configura las preguntas, administra los departamentos y vincula los"
-      " documentos para respaldar la información."
+  st.header("🛠️ Diseñador y Gestión de Formatos")
+
+  tab1, tab2, tab3 = st.tabs(
+      ["📋 Ver y Modificar Formatos", "➕ Agregar Nuevo Campo", "🏢 Crear Departamento"]
   )
 
-  tab1, tab2, tab3, tab4 = st.tabs(
-      [
-          "📂 Gestión de Archivos (Viejos / Nuevos)",
-          "📋 Ver y Modificar Formatos",
-          "➕ Agregar Nuevo Campo",
-          "🏢 Crear Departamento",
-      ]
-  )
-
-  # NUEVA PESTAÑA: Botones y configuración de archivos para reportes viejos y nuevos
   with tab1:
-    st.subheader("📁 Conexión de Documentos y Respaldos")
-    st.write(
-        "Define aquí los archivos de Google Sheets o documentos donde se"
-        " administrará la información histórica y la nueva."
-    )
-
-    archivo_viejos_input = st.text_input(
-        "📂 Archivo de Reportes Viejos (Historial / Google Sheets)",
-        value=st.session_state["archivos_config"]["archivo_viejos"],
-        placeholder=(
-            "Pega el nombre o enlace de la hoja con datos anteriores"
-        ),
-    )
-
-    archivo_nuevos_input = st.text_input(
-        "💾 Archivo para Guardar Reportes Nuevos (Google Sheets Destino)",
-        value=st.session_state["archivos_config"]["archivo_nuevos"],
-        placeholder=(
-            "Pega el nombre o enlace de la hoja donde se guardará lo nuevo"
-        ),
-    )
-
-    if st.button("Guardar Configuración de Archivos"):
-      st.session_state["archivos_config"]["archivo_viejos"] = (
-          archivo_viejos_input
-      )
-      st.session_state["archivos_config"]["archivo_nuevos"] = (
-          archivo_nuevos_input
-      )
-      st.success(
-          "¡Los enlaces y archivos de respaldo fueron actualizados"
-          " exitosamente!"
-      )
-
-    st.markdown("---")
-    st.info(
-        f"📌 **Archivo Viejos Actual:** "
-        f"{st.session_state['archivos_config']['archivo_viejos'] or 'No definido'}"
-    )
-    st.info(
-        f"📌 **Archivo Nuevos Actual:** "
-        f"{st.session_state['archivos_config']['archivo_nuevos'] or 'No definido'}"
-    )
-
-  with tab2:
     depto_sel = st.selectbox(
-        "Selecciona el Departamento para ver su formato",
+        "Selecciona el Departamento",
         st.session_state["departamentos"],
         key="ver_depto",
     )
-    st.subheader(f"Estructura actual del formato: {depto_sel}")
-
+    st.subheader(f"Estructura del formato: {depto_sel}")
     campos_actuales = st.session_state["formatos_deptos_avanzado"].get(
         depto_sel, []
     )
@@ -165,30 +143,24 @@ if menu == "Diseñador de Formatos por Departamento":
         with st.expander(
             f"📌 Campo {idx + 1}: {campo['nombre']} ({campo['tipo']})"
         ):
-          st.write(f"**Tipo de Dato:** {campo['tipo']}")
+          st.write(f"**Tipo:** {campo['tipo']}")
           if campo["opciones"]:
-            st.write(f"**Opciones / Botones:** {campo['opciones']}")
-          else:
-            st.write("**Opciones / Botones:** Campo de entrada libre")
-
-          if st.button(f"Eliminar este campo", key=f"del_{depto_sel}_{idx}"):
+            st.write(f"**Opciones:** {campo['opciones']}")
+          if st.button(f"Eliminar campo", key=f"del_{depto_sel}_{idx}"):
             st.session_state["formatos_deptos_avanzado"][depto_sel].pop(idx)
-            st.warning(f"¡Campo '{campo['nombre']}' eliminado con éxito!")
+            st.warning("¡Campo eliminado!")
             st.rerun()
     else:
-      st.info("Este departamento no tiene campos personalizados configurados.")
+      st.info("Este departamento no tiene campos personalizados.")
 
-  with tab3:
-    st.subheader("Añadir un nuevo campo con opciones predeterminadas")
+  with tab2:
+    st.subheader("Añadir un nuevo campo")
     depto_agregar = st.selectbox(
-        "Departamento al que deseas agregar el campo",
-        st.session_state["departamentos"],
-        key="agregar_depto",
+        "Departamento", st.session_state["departamentos"], key="agregar_depto"
     )
-
     nombre_campo = st.text_input("Nombre de la Pregunta / Campo")
     tipo_dato = st.selectbox(
-        "Selecciona el Tipo de Dato",
+        "Tipo de Dato",
         [
             "Texto Corto",
             "Texto Largo (Párrafo)",
@@ -196,14 +168,13 @@ if menu == "Diseñador de Formatos por Departamento":
             "Fecha",
         ],
     )
-
     opciones_campo = ""
     if tipo_dato == "Desplegable (Opciones/Botones)":
       opciones_campo = st.text_area(
-          "Escribe las opciones separadas por comas (Ej: Opción 1, Opción 2)"
+          "Opciones separadas por comas (Ej: Opción 1, Opción 2)"
       )
 
-    if st.button("Guardar e Integrar al Formato"):
+    if st.button("Guardar e Integrar"):
       if nombre_campo:
         nuevo_item = {
             "nombre": nombre_campo,
@@ -212,33 +183,27 @@ if menu == "Diseñador de Formatos por Departamento":
         }
         if depto_agregar not in st.session_state["formatos_deptos_avanzado"]:
           st.session_state["formatos_deptos_avanzado"][depto_agregar] = []
-
         st.session_state["formatos_deptos_avanzado"][depto_agregar].append(
             nuevo_item
         )
-        st.success(
-            f"¡El campo '{nombre_campo}' fue agregado exitosamente al"
-            f" formato de {depto_agregar}!"
-        )
+        st.success(f"¡Campo '{nombre_campo}' agregado con éxito!")
         st.rerun()
       else:
-        st.error("Por favor, ingresa el nombre del campo.")
+        st.error("Ingresa el nombre del campo.")
 
-  with tab4:
+  with tab3:
     st.subheader("Crear un nuevo departamento")
-    nuevo_d = st.text_input(
-        "Nombre del nuevo Departamento (Ej. Control de Calidad)"
-    )
+    nuevo_d = st.text_input("Nombre del Departamento")
     if st.button("Registrar Departamento"):
       if nuevo_d and nuevo_d not in st.session_state["departamentos"]:
         st.session_state["departamentos"].append(nuevo_d)
         st.session_state["formatos_deptos_avanzado"][nuevo_d] = []
-        st.success(f"¡Departamento '{nuevo_d}' creado con éxito!")
+        st.success(f"¡Departamento '{nuevo_d}' creado!")
         st.rerun()
 
 
 # ==============================================================================
-# 2. PANEL DE TÉCNICO (Formulario Dinámico Inteligente)
+# 2. PANEL DE TÉCNICO (Formulario)
 # ==============================================================================
 elif menu == "Panel de Técnico (Reporte de Falla)":
   st.header("📝 Registro de Reporte de Fallas")
@@ -338,9 +303,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
           ],
       )
     with col4:
-      observaciones = st.text_area(
-          "Observaciones o sugerencias sobre fallas futuras"
-      )
+      observaciones = st.text_area("Observaciones sobre fallas futuras")
 
     respuestas_dinamicas = {}
     config_campos = st.session_state["formatos_deptos_avanzado"].get(
@@ -349,7 +312,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 
     if config_campos:
       st.markdown("---")
-      st.subheader(f"📋 Campos específicos configurados para {depto_activo}")
+      st.subheader(f"📋 Campos específicos para {depto_activo}")
       for campo in config_campos:
         nombre_c = campo["nombre"]
         tipo_c = campo["tipo"]
@@ -400,19 +363,78 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             ignore_index=True,
             sort=False,
         )
-        st.success("¡Reporte enviado y registrado con éxito en el sistema!")
+        st.success("¡Reporte enviado y registrado con éxito!")
 
 
 # ==============================================================================
-# 3. PANEL DE ADMINISTRACIÓN
+# 3. PANEL DE ADMINISTRACIÓN (Subida, Descarga, Actualización y Gráficas)
 # ==============================================================================
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control Central")
 
+  # SECCIÓN DE GESTIÓN Y BARRIDO DE ARCHIVOS
+  st.subheader("📂 Gestión, Sincronización y Respaldo")
+  col_sub, col_desc, col_act = st.columns(3)
+
+  with col_sub:
+    st.write("**Subir Reportes Viejos:**")
+    archivo_subido = st.file_uploader(
+        "Archivo histórico (.xlsx, .csv)", type=["xlsx", "csv"], key="subir_viejos"
+    )
+    if archivo_subido is not None:
+      try:
+        if archivo_subido.name.endswith(".csv"):
+          df_carga = pd.read_csv(archivo_subido)
+        else:
+          df_carga = pd.read_excel(archivo_subido)
+
+        st.session_state["bitacora_general"] = pd.concat(
+            [st.session_state["bitacora_general"], df_carga],
+            ignore_index=True,
+            sort=False,
+        )
+        st.success("¡Datos históricos integrados!")
+      except Exception as e:
+        st.error(f"Error al leer: {e}")
+
+  with col_desc:
+    st.write("**Descargar Respaldo:**")
+    df_all = st.session_state["bitacora_general"]
+    if not df_all.empty:
+      output = io.BytesIO()
+      with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df_export = df_all.drop(
+            columns=[col for col in ["Fecha_Dt"] if col in df_all.columns]
+        )
+        df_export.to_excel(
+            writer, index=False, sheet_name="Reportes_Mantenimiento"
+        )
+      excel_data = output.getvalue()
+
+      st.download_button(
+          label="📥 Descargar Excel",
+          data=excel_data,
+          file_name=f"Bitacora_Mantenimiento_{datetime.today().strftime('%Y-%m-%d')}.xlsx",
+          mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      )
+    else:
+      st.info("Sin datos para exportar.")
+
+  with col_act:
+    st.write("**Actualizar Vista:**")
+    st.write("Forzar barrido y recarga.")
+    if st.button("🔄 Actualizar / Refrescar Página"):
+      st.rerun()
+
+  st.markdown("---")
+
   df_all = st.session_state["bitacora_general"]
 
   if df_all.empty:
-    st.info("Aún no hay reportes registrados.")
+    st.info(
+        "Aún no hay reportes registrados. Sube tu archivo histórico arriba o"
+        " registra una falla."
+    )
   else:
     c1, c2, c3 = st.columns(3)
     c1.metric("Total de Reportes", len(df_all))
@@ -430,10 +452,16 @@ elif menu == "Panel de Administración":
     else:
       df_view = df_all
 
+    st.subheader("Historial de Registros")
     st.dataframe(df_view, use_container_width=True)
 
     st.markdown("---")
-    if st.button("⚠️ Borrar Base de Datos"):
+    st.subheader("📈 Estadísticas de Fallas por Máquina")
+    if not df_view.empty and "Maquina" in df_view.columns:
+      conteo_maquinas = df_view["Maquina"].value_counts()
+      st.bar_chart(conteo_maquinas)
+
+    if st.button("⚠️ Borrar Base de Datos Temporal"):
       st.session_state["bitacora_general"] = pd.DataFrame(
           columns=[
               "Fecha",
