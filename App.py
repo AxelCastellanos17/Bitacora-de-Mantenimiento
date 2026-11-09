@@ -42,7 +42,7 @@ if "bitacora_general" not in st.session_state:
       ]
   )
 
-# Departamentos y estructura avanzada de formatos (con tipo de dato y opciones)
+# Departamentos y estructura avanzada de formatos
 if "departamentos" not in st.session_state:
   st.session_state["departamentos"] = [
       "Departamento de Mantenimiento CH",
@@ -56,12 +56,7 @@ if "formatos_deptos_avanzado" not in st.session_state:
           {
               "nombre": "Portamolde",
               "tipo": "Desplegable",
-              "opciones": "Portalmolde 1, Portalmolde 2, Portalmolde 3, N.A",
-          },
-          {
-              "nombre": "Tiempo Muerto",
-              "tipo": "Texto Corto",
-              "opciones": "",
+              "opciones": "Portalmolde 1, Portalmolde 2, N.A",
           },
       ],
       "Moldes": [
@@ -69,47 +64,91 @@ if "formatos_deptos_avanzado" not in st.session_state:
               "nombre": "Molde Afectado",
               "tipo": "Texto Corto",
               "opciones": "",
-          },
-          {
-              "nombre": "Detalle de Talla",
-              "tipo": "Texto Corto",
-              "opciones": "",
-          },
+          }
       ],
       "Administración": [
           {
               "nombre": "Costo Operativo",
               "tipo": "Texto Corto",
               "opciones": "",
-          },
-          {
-              "nombre": "Supervisor a Cargo",
-              "tipo": "Texto Corto",
-              "opciones": "",
-          },
+          }
       ],
+  }
+
+# Almacenamiento temporal para las rutas o nombres de los archivos vinculados
+if "archivos_config" not in st.session_state:
+  st.session_state["archivos_config"] = {
+      "archivo_viejos": "",
+      "archivo_nuevos": "",
   }
 
 
 # ==============================================================================
-# 1. DISEÑADOR DE FORMATOS (Crear, configurar tipos de datos y botones/opciones)
+# 1. DISEÑADOR DE FORMATOS Y VINCULACIÓN DE ARCHIVOS
 # ==============================================================================
 if menu == "Diseñador de Formatos por Departamento":
-  st.header("🛠️ Diseñador Avanzado de Formatos")
+  st.header("🛠️ Diseñador y Gestión de Archivos y Formatos")
   st.write(
-      "Visualiza todos los formatos creados, añade nuevos campos eligiendo su"
-      " tipo de dato y configura opciones predeterminadas."
+      "Configura las preguntas, administra los departamentos y vincula los"
+      " documentos para respaldar la información."
   )
 
-  tab1, tab2, tab3 = st.tabs(
+  tab1, tab2, tab3, tab4 = st.tabs(
       [
-          "📋 Ver y Gestionar Formatos",
+          "📂 Gestión de Archivos (Viejos / Nuevos)",
+          "📋 Ver y Modificar Formatos",
           "➕ Agregar Nuevo Campo",
           "🏢 Crear Departamento",
       ]
   )
 
+  # NUEVA PESTAÑA: Botones y configuración de archivos para reportes viejos y nuevos
   with tab1:
+    st.subheader("📁 Conexión de Documentos y Respaldos")
+    st.write(
+        "Define aquí los archivos de Google Sheets o documentos donde se"
+        " administrará la información histórica y la nueva."
+    )
+
+    archivo_viejos_input = st.text_input(
+        "📂 Archivo de Reportes Viejos (Historial / Google Sheets)",
+        value=st.session_state["archivos_config"]["archivo_viejos"],
+        placeholder=(
+            "Pega el nombre o enlace de la hoja con datos anteriores"
+        ),
+    )
+
+    archivo_nuevos_input = st.text_input(
+        "💾 Archivo para Guardar Reportes Nuevos (Google Sheets Destino)",
+        value=st.session_state["archivos_config"]["archivo_nuevos"],
+        placeholder=(
+            "Pega el nombre o enlace de la hoja donde se guardará lo nuevo"
+        ),
+    )
+
+    if st.button("Guardar Configuración de Archivos"):
+      st.session_state["archivos_config"]["archivo_viejos"] = (
+          archivo_viejos_input
+      )
+      st.session_state["archivos_config"]["archivo_nuevos"] = (
+          archivo_nuevos_input
+      )
+      st.success(
+          "¡Los enlaces y archivos de respaldo fueron actualizados"
+          " exitosamente!"
+      )
+
+    st.markdown("---")
+    st.info(
+        f"📌 **Archivo Viejos Actual:** "
+        f"{st.session_state['archivos_config']['archivo_viejos'] or 'No definido'}"
+    )
+    st.info(
+        f"📌 **Archivo Nuevos Actual:** "
+        f"{st.session_state['archivos_config']['archivo_nuevos'] or 'No definido'}"
+    )
+
+  with tab2:
     depto_sel = st.selectbox(
         "Selecciona el Departamento para ver su formato",
         st.session_state["departamentos"],
@@ -139,7 +178,7 @@ if menu == "Diseñador de Formatos por Departamento":
     else:
       st.info("Este departamento no tiene campos personalizados configurados.")
 
-  with tab2:
+  with tab3:
     st.subheader("Añadir un nuevo campo con opciones predeterminadas")
     depto_agregar = st.selectbox(
         "Departamento al que deseas agregar el campo",
@@ -161,8 +200,7 @@ if menu == "Diseñador de Formatos por Departamento":
     opciones_campo = ""
     if tipo_dato == "Desplegable (Opciones/Botones)":
       opciones_campo = st.text_area(
-          "Escribe las opciones separadas por comas (Ej: Opción 1, Opción 2,"
-          " Opción 3)"
+          "Escribe las opciones separadas por comas (Ej: Opción 1, Opción 2)"
       )
 
     if st.button("Guardar e Integrar al Formato"):
@@ -186,7 +224,7 @@ if menu == "Diseñador de Formatos por Departamento":
       else:
         st.error("Por favor, ingresa el nombre del campo.")
 
-  with tab3:
+  with tab4:
     st.subheader("Crear un nuevo departamento")
     nuevo_d = st.text_input(
         "Nombre del nuevo Departamento (Ej. Control de Calidad)"
@@ -297,8 +335,6 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
               "Tornillo M8",
               "Fitting de 1/8 Manguera 6",
               "Fitting de 1/4 Manguera 6",
-              "Fitting de 1/8 Manguera 8",
-              "Fitting de 1/4 Manguera 8",
           ],
       )
     with col4:
@@ -306,7 +342,6 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
           "Observaciones o sugerencias sobre fallas futuras"
       )
 
-    # Renderizar dinámicamente los campos avanzados creados en el Diseñador
     respuestas_dinamicas = {}
     config_campos = st.session_state["formatos_deptos_avanzado"].get(
         depto_activo, []
