@@ -335,7 +335,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
               f"{nombre_c}", lista_opciones
           )
         elif tipo_c == "Fecha":
-          respuestas_dinamicas[nombre_c] = str(
+          respuestas_dinamicals[nombre_c] = str(
               st.date_input(f"{nombre_c}", value=datetime.today())
           )
 
@@ -372,7 +372,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 
 
 # ==============================================================================
-# 3. PANEL DE ADMINISTRACIÓN (Con Filtros Avanzados y Gráficas Siempre Visibles)
+# 3. PANEL DE ADMINISTRACIÓN (Con Filtros y Nombres de Técnicos Asegurados)
 # ==============================================================================
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control Central")
@@ -406,7 +406,7 @@ elif menu == "Panel de Administración":
   df_all = st.session_state["bitacora_general"]
 
   # ==========================================================================
-  # SECCIÓN DE FILTROS AVANZADOS (Visibles siempre)
+  # SECCIÓN DE FILTROS CON NOMBRES DE TÉCNICOS Y OPCIONES FIJAS
   # ==========================================================================
   st.subheader("🔍 Filtros de Búsqueda y Gráfica")
 
@@ -421,18 +421,54 @@ elif menu == "Panel de Administración":
     filtro_depto = st.selectbox("Filtrar por Departamento", deptos_disponibles)
 
     maquinas_disponibles = (
-        ["Todas"] + list(df_all["Maquina"].dropna().unique())
-        if not df_all.empty and "Maquina" in df_all.columns
-        else ["Todas"]
+        ["Todas"]
+        + [
+            "Todas Las Maquinas",
+            "Maquina 1",
+            "Maquina 6",
+            "Maquina 8",
+            "Maquina 9",
+            "Maquina 10",
+            "Maquina 11",
+            "Maquina 12",
+            "Maquina 13",
+            "Moldes",
+            "Trabajo en Edificio",
+            "Molinos C.H",
+            "Molino 7G",
+        ]
+        + (
+            list(df_all["Maquina"].dropna().unique())
+            if not df_all.empty and "Maquina" in df_all.columns
+            else []
+        )
     )
+    # Eliminar duplicados manteniendo el orden
+    maquinas_disponibles = list(dict.fromkeys(maquinas_disponibles))
     filtro_maquina = st.selectbox("Filtrar por Máquina", maquinas_disponibles)
 
   with f_col2:
-    tecnicos_disponibles = (
-        ["Todos"] + list(df_all["Quien_Reporta"].dropna().unique())
+    # Lista predeterminada de técnicos oficiales + los que vengan en el archivo
+    tecnicos_oficiales = [
+        "Carlos Castellanos",
+        "Axel Castellanos",
+        "Manuel Hernandez",
+        "Bayron Enamorado",
+        "Arnold Matute",
+        "Ismael Castellanos",
+        "Isaac Bejarano",
+        "Jonathan Alberto",
+        "Gabriel Rivas",
+    ]
+    tecnicos_en_datos = (
+        list(df_all["Quien_Reporta"].dropna().unique())
         if not df_all.empty and "Quien_Reporta" in df_all.columns
-        else ["Todos"]
+        else []
     )
+    tecnicos_disponibles = ["Todos"] + list(
+        dict.fromkeys(tecnicos_oficiales + tecnicos_en_datos)
+    )
+
     filtro_tecnico = st.selectbox(
         "Filtrar por Quién Reporta", tecnicos_disponibles
     )
