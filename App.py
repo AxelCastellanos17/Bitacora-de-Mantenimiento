@@ -350,7 +350,6 @@ elif menu == "Panel de Administración":
       ]
   )
 
-  # Panel para acomodar y elegir qué columnas usar en la gráfica y filtros
   with st.expander(
       "⚙️ Configurar campos de la Gráfica y Filtros (Estilo Tabla Dinámica)",
       expanded=True,
@@ -387,7 +386,6 @@ elif menu == "Panel de Administración":
           ),
       )
 
-  # Selectores interactivos basados dinámicamente en las columnas seleccionadas
   f1, f2, f3 = st.columns(3)
   with f1:
     val_col1 = "Todos"
@@ -406,14 +404,12 @@ elif menu == "Panel de Administración":
       st.info("Filtro 2 inactivo")
 
   with f3:
-    # Buscador general de texto
     texto_busqueda = st.text_input(
         "Buscar texto en cualquier columna",
         "",
         placeholder="Escribe para buscar...",
     )
 
-  # Aplicar filtros dinámicos al DataFrame
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
     if (
@@ -429,7 +425,6 @@ elif menu == "Panel de Administración":
     ):
       df_view = df_view[df_view[filtro_op2] == val_col2]
     if texto_busqueda:
-      # Busca el texto en todo el dataframe de manera global
       mask = df_view.astype(str).apply(
           lambda x: x.str.contains(texto_busqueda, case=False, na=False)
       ).any(axis=1)
@@ -448,3 +443,4 @@ elif menu == "Panel de Administración":
         "Datos"
     )
     st.bar_chart(df_cero)
+      
