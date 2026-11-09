@@ -373,3 +373,54 @@ elif menu == "Panel de Administración":
         )
     else:
       st.warning("Por favor pega los datos en el cuadro de texto antes de procesar.")
+# ============================================================================
+  # FILTROS AVANZADOS Y RANGO DE FECHAS
+  # ============================================================================
+  st.markdown("---")
+  st.subheader("🔍 Filtros de Búsqueda y Gráfica")
+
+  df_all = st.session_state["bitacora_general"]
+
+  f1, f2, f3 = st.columns(3)
+  with f1:
+    deptos = (
+        ["Todos"] + list(df_all["Departamento"].dropna().unique())
+        if not df_all.empty and "Departamento" in df_all.columns
+        else ["Todos"]
+    )
+    f_dep = st.selectbox("Filtrar por Departamento", deptos)
+  with f2:
+    maqs = (
+        ["Todas"] + list(df_all["Maquina"].dropna().unique())
+        if not df_all.empty and "Maquina" in df_all.columns
+        else ["Todas"]
+    )
+    f_maq = st.selectbox("Filtrar por Máquina", maqs)
+  with f3:
+    filtro_diag = st.text_input("Buscar en Diagnóstico", "")
+
+  # Aplicar filtros al DataFrame
+  df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
+  if not df_view.empty:
+    if f_dep != "Todos" and "Departamento" in df_view.columns:
+      df_view = df_view[df_view["Departamento"] == f_dep]
+    if f_maq != "Todas" and "Maquina" in df_view.columns:
+      df_view = df_view[df_view["Maquina"] == f_maq]
+    if filtro_diag and "Diagnostico" in df_view.columns:
+      df_view = df_view[
+          df_view["Diagnostico"].str.contains(filtro_diag, case=False, na=False)
+      ]
+
+  st.markdown("---")
+  st.metric("Registros Encontrados (Filtrados)", len(df_view))
+  st.dataframe(df_view, use_container_width=True)
+
+  st.markdown("---")
+  st.subheader("📈 Estadísticas de Fallas por Máquina")
+  if not df_view.empty and "Maquina" in df_view.columns:
+    st.bar_chart(df_view["Maquina"].value_counts())
+  else:
+    df_cero = pd.DataFrame({"Máquinas": ["Sin datos"], "Cantidad": [0]}).set_index(
+        "Máquinas"
+    )
+    st.bar_chart(df_cero)
