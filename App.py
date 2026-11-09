@@ -24,6 +24,7 @@ menu = st.sidebar.selectbox(
 
 EXCEL_FILE = "Bitacora.xlsx"
 
+# PERSISTENCIA AUTOMÁTICA: Carga los datos guardados al iniciar la app
 if "bitacora_general" not in st.session_state:
   if os.path.exists(EXCEL_FILE):
     try:
@@ -212,6 +213,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             [st.session_state["bitacora_general"], df_nuevo],
             ignore_index=True,
         )
+        # Guarda automáticamente en disco para que no se pierda al actualizar
         try:
           st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
         except Exception as ex:
@@ -253,10 +255,15 @@ elif menu == "Panel de Administración":
           )
         else:
           st.session_state["bitacora_general"] = pd.read_excel(archivo_subido)
+
+        # Guarda automáticamente el archivo cargado para persistencia
+        st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
+
         st.success(
-            f"✅ Archivo abierto con éxito"
+            f"✅ Archivo abierto y guardado con éxito"
             f" ({len(st.session_state['bitacora_general'])} registros)"
         )
+        st.rerun()
       except Exception as e:
         st.error(f"Error al abrir el archivo: {e}")
 
@@ -308,6 +315,7 @@ elif menu == "Panel de Administración":
               ignore_index=True,
               sort=False,
           )
+          # Guarda automáticamente en disco tras pegar
           try:
             st.session_state["bitacora_general"].to_excel(
                 EXCEL_FILE, index=False
@@ -315,7 +323,8 @@ elif menu == "Panel de Administración":
           except:
             pass
           st.success(
-              f"✅ ¡Se agregaron {len(df_pegado)} registros nuevos con éxito!"
+              f"✅ ¡Se agregaron {len(df_pegado)} registros nuevos y se guardaron"
+              " permanentemente!"
           )
           st.rerun()
         else:
@@ -325,15 +334,12 @@ elif menu == "Panel de Administración":
     else:
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
-  # ============================================================================
   # FILTROS Y GRÁFICA PERSONALIZABLES (ESTILO TABLA DINÁMICA)
-  # ============================================================================
   st.markdown("---")
   st.subheader("🔍 Filtros de Búsqueda y Gráfica Dinámica")
 
   df_all = st.session_state["bitacora_general"]
 
-  # Controles para reordenar los filtros a tu gusto
   with st.expander(
       "⚙️ Configurar orden y campos de filtro (Estilo Tabla Dinámica)",
       expanded=True,
@@ -373,7 +379,6 @@ elif menu == "Panel de Administración":
           ],
       )
 
-  # Selectores interactivos basados en tus selecciones
   f1, f2, f3 = st.columns(3)
   with f1:
     deptos = (
