@@ -222,7 +222,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control")
 
-  col_d, col_a = st.columns(2)
+  col_d, col_a, col_b = st.columns(3)
   with col_d:
     df_all = st.session_state["bitacora_general"]
     if not df_all.empty:
@@ -238,11 +238,14 @@ elif menu == "Panel de Administración":
 
   with col_a:
     archivo_subido = st.file_uploader(
-        "📂 Abrir archivo Excel de Bitácora", type=["xlsx"]
+        "📂 Abrir archivo Excel", type=["xlsx", "csv"]
     )
     if archivo_subido is not None:
       try:
-        st.session_state["bitacora_general"] = pd.read_excel(archivo_subido)
+        if archivo_subido.name.endswith(".csv"):
+          st.session_state["bitacora_general"] = pd.read_csv(archivo_subido)
+        else:
+          st.session_state["bitacora_general"] = pd.read_excel(archivo_subido)
         st.success(
             f"✅ Archivo abierto ({len(st.session_state['bitacora_general'])}"
             " registros)"
@@ -250,9 +253,32 @@ elif menu == "Panel de Administración":
       except Exception as e:
         st.error(f"Error al abrir: {e}")
 
-    if st.button("🔄 Refrescar"):
+  with col_b:
+    st.write("🗑️ **Gestión de Datos**")
+    if st.button("🗑️ Borrar y Limpiar Todos los Datos"):
+      st.session_state["bitacora_general"] = pd.DataFrame(
+          columns=[
+              "Fecha",
+              "Departamento",
+              "Turno",
+              "Quien_Reporta",
+              "Maquina",
+              "Seccion_Maquina",
+              "Campo_Trabajo",
+              "Diagnostico",
+              "Solucion",
+              "Repuesto",
+              "Hora_Inicial",
+              "Hora_Final",
+              "Observaciones",
+          ]
+      )
       if os.path.exists(EXCEL_FILE):
-        st.session_state["bitacora_general"] = pd.read_excel(EXCEL_FILE)
+        try:
+          os.remove(EXCEL_FILE)
+        except:
+          pass
+      st.success("¡Se han borrado los datos cargados correctamente!")
       st.rerun()
 
   # PEGAR DATOS DIRECTAMENTE
