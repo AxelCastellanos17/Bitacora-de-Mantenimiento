@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import streamlit as st
 
+# Configuración de la página web
 st.set_page_config(
     page_title="Reporte de Fallas - Mantenimiento C.H",
     page_icon="🔧",
@@ -13,6 +14,7 @@ st.set_page_config(
 st.title("🔧 Sistema Integral de Reportes de Fallas C.H")
 st.markdown("---")
 
+# Menú lateral para navegar entre módulos
 menu = st.sidebar.selectbox(
     "Selecciona el Módulo",
     [
@@ -22,13 +24,15 @@ menu = st.sidebar.selectbox(
     ],
 )
 
+# ARCHIVO EXCEL LOCAL PARA PERSISTENCIA
 EXCEL_FILE = "Bitacora.xlsx"
 
+# CARGA AUTOMÁTICA Y ROBUSTA DE LA BITÁCORA
 if "bitacora_general" not in st.session_state:
   if os.path.exists(EXCEL_FILE):
     try:
       st.session_state["bitacora_general"] = pd.read_excel(EXCEL_FILE)
-    except:
+    except Exception as e:
       st.session_state["bitacora_general"] = pd.DataFrame()
   else:
     st.session_state["bitacora_general"] = pd.DataFrame(
@@ -49,6 +53,7 @@ if "bitacora_general" not in st.session_state:
         ]
     )
 
+# Departamentos y estructura avanzada de formatos
 if "departamentos" not in st.session_state:
   st.session_state["departamentos"] = [
       "Departamento de Mantenimiento CH",
@@ -69,7 +74,13 @@ if "formatos_deptos_avanzado" not in st.session_state:
       "Administración": [
           {"nombre": "Costo Operativo", "tipo": "Texto Corto", "opciones": ""}
       ],
-  }st.sidebar.markdown("---")
+  }
+
+
+# ==============================================================================
+# BARRA LATERAL: REPORTE RÁPIDO DE LA SEMANA (SÁBADO A SÁBADO)
+# ==============================================================================
+st.sidebar.markdown("---")
 st.sidebar.subheader("📢 Reportes de la Semana (Sáb - Sáb)")
 
 df_general = st.session_state["bitacora_general"]
@@ -117,8 +128,13 @@ if not df_general.empty and "Fecha" in df_general.columns:
 else:
   st.sidebar.info("Esperando nuevos reportes...")
 
+
+# ==============================================================================
+# 1. DISEÑADOR DE FORMATOS
+# ==============================================================================
 if menu == "Diseñador de Formatos por Departamento":
   st.header("🛠️ Diseñador y Gestión de Formatos")
+
   tab1, tab2, tab3 = st.tabs(
       ["📋 Ver y Modificar Formatos", "➕ Agregar Nuevo Campo", "🏢 Crear Departamento"]
   )
@@ -133,6 +149,7 @@ if menu == "Diseñador de Formatos por Departamento":
     campos_actuales = st.session_state["formatos_deptos_avanzado"].get(
         depto_sel, []
     )
+
     if campos_actuales:
       for idx, campo in enumerate(campos_actuales):
         with st.expander(
@@ -168,6 +185,7 @@ if menu == "Diseñador de Formatos por Departamento":
       opciones_campo = st.text_area(
           "Opciones separadas por comas (Ej: Opción 1, Opción 2)"
       )
+
     if st.button("Guardar e Integrar"):
       if nombre_campo:
         nuevo_item = {
@@ -195,8 +213,13 @@ if menu == "Diseñador de Formatos por Departamento":
         st.success(f"¡Departamento '{nuevo_d}' creado!")
         st.rerun()
 
+
+# ==============================================================================
+# 2. PANEL DE TÉCNICO (Formulario)
+# ==============================================================================
 elif menu == "Panel de Técnico (Reporte de Falla)":
   st.header("📝 Registro de Reporte de Fallas")
+
   depto_activo = st.selectbox(
       "Selecciona el Departamento", st.session_state["departamentos"]
   )
@@ -204,6 +227,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 
   with st.form("form_reporte_fallas"):
     col1, col2 = st.columns(2)
+
     with col1:
       fecha = st.date_input("Fecha", value=datetime.today())
       turno = st.selectbox("Turno", ["Turno Diurno", "Turno Nocturno"])
@@ -239,6 +263,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
               "Molino 7G",
           ],
       )
+
     with col2:
       seccion_maquina = st.selectbox(
           "Sección de Maquina",
@@ -296,6 +321,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     config_campos = st.session_state["formatos_deptos_avanzado"].get(
         depto_activo, []
     )
+
     if config_campos:
       st.markdown("---")
       st.subheader(f"📋 Campos específicos para {depto_activo}")
@@ -303,6 +329,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
         nombre_c = campo["nombre"]
         tipo_c = campo["tipo"]
         ops_c = campo["opciones"]
+
         if tipo_c == "Texto Corto":
           respuestas_dinamicas[nombre_c] = st.text_input(f"{nombre_c}")
         elif tipo_c == "Texto Largo (Párrafo)":
@@ -320,6 +347,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
           )
 
     enviar = st.form_submit_button("Enviar Reporte")
+
     if enviar:
       if not diagnostico:
         st.error("Por favor, especifica el diagnóstico de la falla.")
@@ -341,12 +369,14 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
         }
         for k, v in respuestas_dinamicas.items():
           fila[k] = v
+
         nuevo_df = pd.DataFrame([fila])
         st.session_state["bitacora_general"] = pd.concat(
             [st.session_state["bitacora_general"], nuevo_df],
             ignore_index=True,
             sort=False,
         )
+
         try:
           limpio_df = st.session_state["bitacora_general"].drop(
               columns=[
@@ -360,9 +390,16 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
           st.warning(
               f"Reporte agregado a la sesión, pero error al persistir: {ex}"
           )
+
         st.success("¡Reporte enviado, registrado y guardado con éxito!")
-          elif menu == "Panel de Administración":
+
+
+# ==============================================================================
+# 3. PANEL DE ADMINISTRACIÓN (Con Verificador de Excel y Filtros)
+# ==============================================================================
+elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control Central")
+
   col_desc, col_act = st.columns(2)
 
   with col_desc:
@@ -381,6 +418,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             writer, index=False, sheet_name="Reportes_Mantenimiento"
         )
       excel_data = output.getvalue()
+
       st.download_button(
           label="📥 Descargar Respaldo Actualizado",
           data=excel_data,
@@ -399,6 +437,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
           f"⚠️ **Base de datos:** El archivo `{EXCEL_FILE}` no se encuentra en la"
           " ruta."
       )
+
     if st.button("🔄 Actualizar / Refrescar Datos"):
       if os.path.exists(EXCEL_FILE):
         st.session_state["bitacora_general"] = pd.read_excel(EXCEL_FILE)
@@ -430,9 +469,11 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 
   st.markdown("---")
   df_all = st.session_state["bitacora_general"]
+
   st.subheader("🔍 Filtros de Búsqueda y Gráfica")
 
   f_col1, f_col2, f_col3 = st.columns(3)
+
   with f_col1:
     deptos_disponibles = (
         ["Todos"] + list(df_all["Departamento"].dropna().unique())
@@ -440,6 +481,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
         else ["Todos"]
     )
     filtro_depto = st.selectbox("Filtrar por Departamento", deptos_disponibles)
+
     maquinas_disponibles = (
         ["Todas"]
         + [
@@ -486,13 +528,16 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     tecnicos_disponibles = ["Todos"] + list(
         dict.fromkeys(tecnicos_oficiales + tecnicos_en_datos)
     )
+
     filtro_tecnico = st.selectbox(
         "Filtrar por Quién Reporta", tecnicos_disponibles
     )
+
     filtro_diag = st.text_input("Buscar en Diagnóstico", "")
 
   with f_col3:
     filtro_sol = st.text_input("Buscar en Solución", "")
+
     st.write("**Filtrar por Rango de Fechas:**")
     try:
       if not df_all.empty:
@@ -515,32 +560,42 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     except:
       rango_fechas = []
 
+  # PROCESAMIENTO DE FILTROS
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
+
   if not df_view.empty:
     if filtro_depto != "Todos" and "Departamento" in df_view.columns:
       df_view = df_view[df_view["Departamento"] == filtro_depto]
+
     if filtro_maquina != "Todas" and "Maquina" in df_view.columns:
       df_view = df_view[df_view["Maquina"] == filtro_maquina]
+
     if filtro_tecnico != "Todos" and "Quien_Reporta" in df_view.columns:
       df_view = df_view[df_view["Quien_Reporta"] == filtro_tecnico]
+
     if filtro_diag and "Diagnostico" in df_view.columns:
       df_view = df_view[
           df_view["Diagnostico"].str.contains(filtro_diag, case=False, na=False)
       ]
+
     if filtro_sol and "Solucion" in df_view.columns:
       df_view = df_view[
           df_view["Solucion"].str.contains(filtro_sol, case=False, na=False)
       ]
+
     if len(rango_fechas) == 2 and "Fecha_Temp" in df_view.columns:
       f_inicio, f_fin = rango_fechas
       df_view = df_view[
           (df_view["Fecha_Temp"].dt.date >= f_inicio)
           & (df_view["Fecha_Temp"].dt.date <= f_fin)
       ]
+
     if "Fecha_Temp" in df_view.columns:
       df_view = df_view.drop(columns=["Fecha_Temp"])
 
   st.markdown("---")
+
+  # RESUMEN DE FILTROS Y ESTADO ACTUAL
   st.subheader("📌 Resumen de Consulta Activa")
   r_col1, r_col2, r_col3, r_col4 = st.columns(4)
   r_col1.metric("Registros Encontrados", len(df_view))
@@ -556,6 +611,8 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     )
 
   st.markdown("---")
+
+  # TABLA DE REGISTROS
   st.subheader("📋 Historial de Registros")
   if not df_view.empty:
     st.dataframe(df_view, use_container_width=True)
@@ -565,8 +622,10 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
         " el archivo está vacío."
     )
 
+  # GRÁFICA VISIBLE SIEMPRE
   st.markdown("---")
   st.subheader("📈 Estadísticas de Fallas por Máquina")
+
   if not df_view.empty and "Maquina" in df_view.columns:
     conteo_maquinas = df_view["Maquina"].value_counts()
     st.bar_chart(conteo_maquinas)
