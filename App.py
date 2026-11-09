@@ -244,7 +244,6 @@ elif menu == "Panel de Administración":
       try:
         nombre_archivo = archivo_subido.name.lower()
         if nombre_archivo.endswith(".csv"):
-          # Añadido encoding='latin-1' para evitar errores con tildes o eñes
           st.session_state["bitacora_general"] = pd.read_csv(
               archivo_subido, encoding="latin-1"
           )
@@ -254,7 +253,6 @@ elif menu == "Panel de Administración":
           )
         else:
           st.session_state["bitacora_general"] = pd.read_excel(archivo_subido)
-
         st.success(
             f"✅ Archivo abierto con éxito"
             f" ({len(st.session_state['bitacora_general'])} registros)"
@@ -327,12 +325,13 @@ elif menu == "Panel de Administración":
     else:
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
-  # FILTROS AVANZADOS COMPLETOS
+  # FILTROS AVANZADOS TIPO TABLA DINÁMICA
   st.markdown("---")
   st.subheader("🔍 Filtros de Búsqueda y Gráfica")
 
   df_all = st.session_state["bitacora_general"]
 
+  # Primera fila de filtros (Departamento, Máquina, Quién Reporta)
   f1, f2, f3 = st.columns(3)
   with f1:
     deptos = (
@@ -356,9 +355,26 @@ elif menu == "Panel de Administración":
     )
     f_tec = st.selectbox("Filtrar por Quién Reporta", tecnicos)
 
-  f_diag = st.text_input("Buscar en Diagnóstico", "")
+  # Segunda fila de filtros (Turno, Campo de Trabajo y Buscador de Diagnóstico)
+  f4, f5, f6 = st.columns(3)
+  with f4:
+    turnos_opts = (
+        ["Todos"] + list(df_all["Turno"].dropna().unique())
+        if not df_all.empty and "Turno" in df_all.columns
+        else ["Todos"]
+    )
+    f_turno = st.selectbox("Filtrar por Turno", turnos_opts)
+  with f5:
+    campos_opts = (
+        ["Todos"] + list(df_all["Campo_Trabajo"].dropna().unique())
+        if not df_all.empty and "Campo_Trabajo" in df_all.columns
+        else ["Todos"]
+    )
+    f_campo = st.selectbox("Filtrar por Campo de Trabajo", campos_opts)
+  with f6:
+    f_diag = st.text_input("Buscar en Diagnóstico", "")
 
-  # Aplicar filtros
+  # Aplicar todos los filtros en cascada
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
     if f_dep != "Todos" and "Departamento" in df_view.columns:
@@ -367,6 +383,10 @@ elif menu == "Panel de Administración":
       df_view = df_view[df_view["Maquina"] == f_maq]
     if f_tec != "Todos" and "Quien_Reporta" in df_view.columns:
       df_view = df_view[df_view["Quien_Reporta"] == f_tec]
+    if f_turno != "Todos" and "Turno" in df_view.columns:
+      df_view = df_view[df_view["Turno"] == f_turno]
+    if f_campo != "Todos" and "Campo_Trabajo" in df_view.columns:
+      df_view = df_view[df_view["Campo_Trabajo"] == f_campo]
     if f_diag and "Diagnostico" in df_view.columns:
       df_view = df_view[
           df_view["Diagnostico"].str.contains(f_diag, case=False, na=False)
