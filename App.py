@@ -571,9 +571,7 @@ elif menu == "Panel de Administración":
 
   st.markdown("---")
 
-  # ==========================================================================
-  # SECCIÓN NUEVA: RESUMEN DE FILTROS Y ESTADO ACTUAL
-  # ==========================================================================
+  # RESUMEN DE FILTROS Y ESTADO ACTUAL
   st.subheader("📌 Resumen de Consulta Activa")
   r_col1, r_col2, r_col3, r_col4 = st.columns(4)
   r_col1.metric("Registros Encontrados", len(df_view))
@@ -600,7 +598,7 @@ elif menu == "Panel de Administración":
         " el archivo está vacío."
     )
 
-  # GRÁFICA VISIBLE SIEMPRE (Muestra conteo o en ceros)
+  # GRÁFICA VISIBLE SIEMPRE
   st.markdown("---")
   st.subheader("📈 Estadísticas de Fallas por Máquina")
 
@@ -608,7 +606,6 @@ elif menu == "Panel de Administración":
     conteo_maquinas = df_view["Maquina"].value_counts()
     st.bar_chart(conteo_maquinas)
   else:
-    # Gráfica en ceros / vacía pero presente para mostrar estructura
     df_cero = pd.DataFrame({"Máquinas": ["Sin datos"], "Cantidad": [0]}).set_index(
         "Máquinas"
     )
@@ -617,4 +614,3 @@ elif menu == "Panel de Administración":
         "💡 *Gráfica en 0 (sin datos bajo los filtros actuales).* Envía un"
         " reporte para ver las estadísticas en tiempo real."
     )
-        
