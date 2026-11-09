@@ -395,7 +395,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 
 
 # ==============================================================================
-# 3. PANEL DE ADMINISTRACIÓN (Con Filtros, Gráficas e Indicador de Archivo)
+# 3. PANEL DE ADMINISTRACIÓN (Con Filtros, Resumen y Gráfica Visible)
 # ==============================================================================
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control Central")
@@ -427,11 +427,10 @@ elif menu == "Panel de Administración":
       )
 
   with col_act:
-    # INDICADOR VISUAL DEL ARCHIVO BASE QUE ESTÁ LEYENDO LA PÁGINA
     if os.path.exists(EXCEL_FILE):
       st.info(
-          f"📂 **Base de datos activa:** `{EXCEL_FILE}` ({len(df_all)}"
-          " registros leídos)"
+          f"📂 **Base de datos activa:** `{EXCEL_FILE}`"
+          f" ({len(st.session_state['bitacora_general'])} registros leídos)"
       )
     else:
       st.warning(
@@ -537,14 +536,10 @@ elif menu == "Panel de Administración":
     except:
       rango_fechas = []
 
-  if df_all.empty:
-    st.info(
-        "No hay registros todavía. Ve al 'Panel de Técnico' y envía tu primer"
-        " reporte para ver las tablas y gráficas."
-    )
-  else:
-    df_view = df_all.copy()
+  # PROCESAMIENTO DE FILTROS
+  df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
 
+  if not df_view.empty:
     if filtro_depto != "Todos" and "Departamento" in df_view.columns:
       df_view = df_view[df_view["Departamento"] == filtro_depto]
 
@@ -574,33 +569,52 @@ elif menu == "Panel de Administración":
     if "Fecha_Temp" in df_view.columns:
       df_view = df_view.drop(columns=["Fecha_Temp"])
 
-    st.markdown("---")
+  st.markdown("---")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Reportes Filtrados", len(df_view))
-    c2.metric(
-        "Departamentos en Vista",
-        df_view["Departamento"].nunique()
-        if "Departamento" in df_view.columns
-        else 0,
-    )
-    c3.metric(
-        "Máquinas en Vista",
-        df_view["Maquina"].nunique() if "Maquina" in df_view.columns else 0,
+  # ==========================================================================
+  # SECCIÓN NUEVA: RESUMEN DE FILTROS Y ESTADO ACTUAL
+  # ==========================================================================
+  st.subheader("📌 Resumen de Consulta Activa")
+  r_col1, r_col2, r_col3, r_col4 = st.columns(4)
+  r_col1.metric("Registros Encontrados", len(df_view))
+  r_col2.metric("Depto Filtrado", filtro_depto)
+  r_col3.metric("Máquina Filtrada", filtro_maquina)
+  r_col4.metric("Técnico Filtrado", filtro_tecnico)
+
+  if len(rango_fechas) == 2:
+    st.caption(
+        f"📅 **Rango de Fechas Activo:** Del"
+        f" `{rango_fechas[0].strftime('%d/%m/%Y')}` al"
+        f" `{rango_fechas[1].strftime('%d/%m/%Y')}`"
     )
 
-    st.markdown("---")
-    st.subheader("📋 Historial de Registros Filtrados")
+  st.markdown("---")
+
+  # TABLA DE REGISTROS
+  st.subheader("📋 Historial de Registros")
+  if not df_view.empty:
     st.dataframe(df_view, use_container_width=True)
+  else:
+    st.info(
+        "No se encontraron registros que coincidan con los filtros actuales o"
+        " el archivo está vacío."
+    )
 
-    st.markdown("---")
-    st.subheader("📈 Estadísticas de Fallas (Según Filtros Aplicados)")
-    if not df_view.empty and "Maquina" in df_view.columns:
-      conteo_maquinas = df_view["Maquina"].value_counts()
-      st.bar_chart(conteo_maquinas)
-    else:
-      st.info(
-          "No hay suficientes datos bajo los filtros seleccionados para mostrar"
-          " la gráfica."
-      )
+  # GRÁFICA VISIBLE SIEMPRE (Muestra conteo o en ceros)
+  st.markdown("---")
+  st.subheader("📈 Estadísticas de Fallas por Máquina")
+
+  if not df_view.empty and "Maquina" in df_view.columns:
+    conteo_maquinas = df_view["Maquina"].value_counts()
+    st.bar_chart(conteo_maquinas)
+  else:
+    # Gráfica en ceros / vacía pero presente para mostrar estructura
+    df_cero = pd.DataFrame({"Máquinas": ["Sin datos"], "Cantidad": [0]}).set_index(
+        "Máquinas"
+    )
+    st.bar_chart(df_cero)
+    st.caption(
+        "💡 *Gráfica en 0 (sin datos bajo los filtros actuales).* Envía un"
+        " reporte para ver las estadísticas en tiempo real."
+    )
         
