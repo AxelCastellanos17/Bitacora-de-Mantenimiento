@@ -71,33 +71,7 @@ if "formatos_deptos_avanzado" not in st.session_state:
       ],
   }
 
-  st.sidebar.markdown("---")
-st.sidebar.subheader("📢 Reportes de la Semana")
-
-df_general = st.session_state["bitacora_general"]
-if not df_general.empty and "Fecha" in df_general.columns:
-  try:
-    df_general["Fecha_Dt"] = pd.to_datetime(df_general["Fecha"], errors="coerce")
-    hoy = datetime.today()
-    sabado_inicio = hoy - timedelta(days=(hoy.weekday() - 5) % 7)
-    sabado_inicio = sabado_inicio.replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    sabado_fin = sabado_inicio + timedelta(days=7)
-    df_semana = df_general[
-        (df_general["Fecha_Dt"] >= sabado_inicio)
-        & (df_general["Fecha_Dt"] < sabado_fin)
-    ]
-    if not df_semana.empty:
-      for idx, row in df_semana.tail(5).iterrows():
-        st.sidebar.markdown(
-            f"🛠️ **{row.get('Maquina', 'N/A')}** - *{row.get('Diagnostico', 'N/A')}*"
-        )
-    else:
-      st.sidebar.info("Sin reportes esta semana.")
-  except:
-    pass
-
+# 1. DISEÑADOR DE FORMATOS
 if menu == "Diseñador de Formatos por Departamento":
   st.header("🛠️ Diseñador y Gestión de Formatos")
   tab1, tab2, tab3 = st.tabs(
@@ -142,6 +116,7 @@ if menu == "Diseñador de Formatos por Departamento":
         st.success(f"¡Departamento {nuevo_dep} creado!")
         st.rerun()
 
+# 2. PANEL DE TÉCNICO
 elif menu == "Panel de Técnico (Reporte de Falla)":
   st.header("📝 Registro de Reporte de Fallas")
   depto_activo = st.selectbox(
@@ -243,6 +218,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
           st.warning(f"Guardado local con advertencia: {ex}")
         st.success("¡Reporte enviado y guardado con éxito!")
 
+# 3. PANEL DE ADMINISTRACIÓN
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control")
 
@@ -279,87 +255,30 @@ elif menu == "Panel de Administración":
         st.session_state["bitacora_general"] = pd.read_excel(EXCEL_FILE)
       st.rerun()
 
-  st.markdown("---")
-  df_all = st.session_state["bitacora_general"]
-  st.subheader("🔍 Filtros y Estadísticas")
-
-  f1, f2 = st.columns(2)
-  with f1:
-    deptos = (
-        ["Todos"] + list(df_all["Departamento"].dropna().unique())
-        if not df_all.empty and "Departamento" in df_all.columns
-        else ["Todos"]
-    )
-    f_dep = st.selectbox("Filtrar Departamento", deptos)
-  with f2:
-    maqs = (
-        ["Todas"] + list(df_all["Maquina"].dropna().unique())
-        if not df_all.empty and "Maquina" in df_all.columns
-        else ["Todas"]
-    )
-    f_maq = st.selectbox("Filtrar Máquina", maqs)
-
-  df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
-  if not df_view.empty:
-    if f_dep != "Todos":
-      df_view = df_view[df_view["Departamento"] == f_dep]
-    if f_maq != "Todas":
-      df_view = df_view[df_view["Maquina"] == f_maq]
-
-  st.markdown("---")
-  st.metric("Registros Encontrados", len(df_view))
-  st.dataframe(df_view, use_container_width=True)
-
-  st.markdown("---")
-  st.subheader("📈 Gráfica de Fallas")
-  if not df_view.empty and "Maquina" in df_view.columns:
-    st.bar_chart(df_view["Maquina"].value_counts())
-  else:
-    df_cero = pd.DataFrame({"Máquinas": ["Sin datos"], "Cantidad": [0]}).set_index(
-        "Máquinas"
-    )
-    st.bar_chart(df_cero)
-# ============================================================================
-  # NUEVA OPCIÓN: PEGAR FILAS Y COLUMNAS DIRECTAMENTE
-  # ============================================================================
+  # PEGAR DATOS DIRECTAMENTE
   st.markdown("---")
   st.subheader("📋 Pegar Datos Directamente (Copia y Pega desde Excel)")
-  st.write(
-      "Selecciona tus celdas en Excel, cópialas (Ctrl + C) y pégalas aquí"
-      " (Ctrl + V):"
-  )
-
   texto_pegado = st.text_area(
-      "Pega tu tabla de Excel aquí (con encabezados incluidos):",
-      height=150,
+      "Selecciona tus celdas en Excel (Ctrl+C) y pégalas aquí (Ctrl+V):",
+      height=120,
       placeholder="Pega aquí los datos copiados de Excel...",
   )
-
   if st.button("📥 Procesar y Agregar Datos Pegados"):
     if texto_pegado:
       try:
-        import io
-        import pandas as pd
-
-        # Lee el texto tabulado (formato estándar al copiar desde Excel)
         df_pegado = pd.read_csv(io.StringIO(texto_pegado), sep="\t")
-
         if not df_pegado.empty:
-          # Une los nuevos datos con los existentes sin borrar nada
           st.session_state["bitacora_general"] = pd.concat(
               [st.session_state["bitacora_general"], df_pegado],
               ignore_index=True,
               sort=False,
           )
-
-          # Guarda los cambios automáticamente en el archivo Excel local
           try:
             st.session_state["bitacora_general"].to_excel(
                 EXCEL_FILE, index=False
             )
           except:
             pass
-
           st.success(
               f"✅ ¡Se agregaron {len(df_pegado)} registros nuevos con éxito!"
           )
@@ -367,15 +286,11 @@ elif menu == "Panel de Administración":
         else:
           st.warning("El texto pegado no contiene datos válidos.")
       except Exception as ex:
-        st.error(
-            f"Error al procesar los datos pegados. Asegúrate de copiar los"
-            f" encabezados de Excel. Detalle: {ex}"
-        )
+        st.error(f"Error al procesar los datos pegados: {ex}")
     else:
-      st.warning("Por favor pega los datos en el cuadro de texto antes de procesar.")
-# ============================================================================
-  # FILTROS AVANZADOS Y RANGO DE FECHAS
-  # ============================================================================
+      st.warning("Pega los datos en el cuadro de texto antes de procesar.")
+
+  # FILTROS AVANZADOS COMPLETOS
   st.markdown("---")
   st.subheader("🔍 Filtros de Búsqueda y Gráfica")
 
@@ -397,18 +312,27 @@ elif menu == "Panel de Administración":
     )
     f_maq = st.selectbox("Filtrar por Máquina", maqs)
   with f3:
-    filtro_diag = st.text_input("Buscar en Diagnóstico", "")
+    tecnicos = (
+        ["Todos"] + list(df_all["Quien_Reporta"].dropna().unique())
+        if not df_all.empty and "Quien_Reporta" in df_all.columns
+        else ["Todos"]
+    )
+    f_tec = st.selectbox("Filtrar por Quién Reporta", tecnicos)
 
-  # Aplicar filtros al DataFrame
+  f_diag = st.text_input("Buscar en Diagnóstico", "")
+
+  # Aplicar filtros
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
     if f_dep != "Todos" and "Departamento" in df_view.columns:
       df_view = df_view[df_view["Departamento"] == f_dep]
     if f_maq != "Todas" and "Maquina" in df_view.columns:
       df_view = df_view[df_view["Maquina"] == f_maq]
-    if filtro_diag and "Diagnostico" in df_view.columns:
+    if f_tec != "Todos" and "Quien_Reporta" in df_view.columns:
+      df_view = df_view[df_view["Quien_Reporta"] == f_tec]
+    if f_diag and "Diagnostico" in df_view.columns:
       df_view = df_view[
-          df_view["Diagnostico"].str.contains(filtro_diag, case=False, na=False)
+          df_view["Diagnostico"].str.contains(f_diag, case=False, na=False)
       ]
 
   st.markdown("---")
