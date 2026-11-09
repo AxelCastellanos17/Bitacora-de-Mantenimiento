@@ -23,11 +23,28 @@ menu = st.sidebar.selectbox(
     ],
 )
 
-# CARGA AUTOMÁTICA DE LA BITÁCORA DESDE EL REPOSITORIO
-if "bitacora_general" not in st.session_state:
-  try:
-    st.session_state["bitacora_general"] = pd.read_excel("Bitacora.xlsx")
-  except Exception as e:
+
+# CARGA DIRECTA Y ACTUALIZADA DESDE GITHUB
+try:
+  st.session_state["bitacora_general"] = pd.read_excel("Bitacora.xlsx")
+except Exception as e:
+  st.session_state["bitacora_general"] = pd.DataFrame(
+      columns=[
+          "Fecha",
+          "Departamento",
+          "Turno",
+          "Quien_Reporta",
+          "Maquina",
+          "Seccion_Maquina",
+          "Campo_Trabajo",
+          "Diagnostico",
+          "Solucion",
+          "Repuesto",
+          "Hora_Inicial",
+          "Hora_Final",
+          "Observaciones",
+      ]
+  )
     st.session_state["bitacora_general"] = pd.DataFrame(
         columns=[
             "Fecha",
