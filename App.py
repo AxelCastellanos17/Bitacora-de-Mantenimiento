@@ -237,7 +237,6 @@ elif menu == "Panel de Administración":
       )
 
   with col_a:
-    # Opción ampliada para aceptar Excel, CSV y Texto Plano (.txt)
     archivo_subido = st.file_uploader(
         "📂 Abrir archivo (Excel, CSV o Texto)", type=["xlsx", "csv", "txt"]
     )
@@ -245,11 +244,13 @@ elif menu == "Panel de Administración":
       try:
         nombre_archivo = archivo_subido.name.lower()
         if nombre_archivo.endswith(".csv"):
-          st.session_state["bitacora_general"] = pd.read_csv(archivo_subido)
-        elif nombre_archivo.endswith(".txt"):
-          # Intenta leer archivos de texto tabulados o separados por comas
+          # Añadido encoding='latin-1' para evitar errores con tildes o eñes
           st.session_state["bitacora_general"] = pd.read_csv(
-              archivo_subido, sep=None, engine="python"
+              archivo_subido, encoding="latin-1"
+          )
+        elif nombre_archivo.endswith(".txt"):
+          st.session_state["bitacora_general"] = pd.read_csv(
+              archivo_subido, sep=None, engine="python", encoding="latin-1"
           )
         else:
           st.session_state["bitacora_general"] = pd.read_excel(archivo_subido)
@@ -300,7 +301,9 @@ elif menu == "Panel de Administración":
   if st.button("📥 Procesar y Agregar Datos Pegados"):
     if texto_pegado:
       try:
-        df_pegado = pd.read_csv(io.StringIO(texto_pegado), sep="\t")
+        df_pegado = pd.read_csv(
+            io.StringIO(texto_pegado), sep="\t", encoding="latin-1"
+        )
         if not df_pegado.empty:
           st.session_state["bitacora_general"] = pd.concat(
               [st.session_state["bitacora_general"], df_pegado],
