@@ -213,7 +213,6 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             [st.session_state["bitacora_general"], df_nuevo],
             ignore_index=True,
         )
-        # Guarda automáticamente en disco para que no se pierda al actualizar
         try:
           st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
         except Exception as ex:
@@ -256,9 +255,7 @@ elif menu == "Panel de Administración":
         else:
           st.session_state["bitacora_general"] = pd.read_excel(archivo_subido)
 
-        # Guarda automáticamente el archivo cargado para persistencia
         st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
-
         st.success(
             f"✅ Archivo abierto y guardado con éxito"
             f" ({len(st.session_state['bitacora_general'])} registros)"
@@ -315,7 +312,6 @@ elif menu == "Panel de Administración":
               ignore_index=True,
               sort=False,
           )
-          # Guarda automáticamente en disco tras pegar
           try:
             st.session_state["bitacora_general"].to_excel(
                 EXCEL_FILE, index=False
@@ -334,118 +330,119 @@ elif menu == "Panel de Administración":
     else:
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
-  # FILTROS Y GRÁFICA PERSONALIZABLES (ESTILO TABLA DINÁMICA)
+  # ============================================================================
+  # FILTROS Y GRÁFICA DINÁMICA USANDO LAS COLUMNAS REALES DE TU ARCHIVO
+  # ============================================================================
   st.markdown("---")
   st.subheader("🔍 Filtros de Búsqueda y Gráfica Dinámica")
 
   df_all = st.session_state["bitacora_general"]
+  columnas_disponibles = (
+      list(df_all.columns)
+      if not df_all.empty
+      else [
+          "Semana",
+          "Fecha",
+          "Turno",
+          "Maquina",
+          "Quien_Reporta",
+          "Descripción de Falla",
+      ]
+  )
 
+  # Panel para acomodar y elegir qué columnas usar en la gráfica y filtros
   with st.expander(
-      "⚙️ Configurar orden y campos de filtro (Estilo Tabla Dinámica)",
+      "⚙️ Configurar campos de la Gráfica y Filtros (Estilo Tabla Dinámica)",
       expanded=True,
   ):
     c_f1, c_f2, c_f3 = st.columns(3)
     with c_f1:
-      f_principal = st.selectbox(
-          "Filtro Principal (Filas)",
-          [
-              "Maquina",
-              "Quien_Reporta",
-              "Turno",
-              "Departamento",
-              "Campo_Trabajo",
-          ],
+      col_grafica = st.selectbox(
+          "Agrupar Gráfica por (Primer Fila / Columna):",
+          columnas_disponibles,
+          index=(
+              columnas_disponibles.index("Maquina")
+              if "Maquina" in columnas_disponibles
+              else 0
+          ),
       )
     with c_f2:
-      f_secundario = st.selectbox(
-          "Filtro Secundario",
-          [
-              "Turno",
-              "Quien_Reporta",
-              "Maquina",
-              "Departamento",
-              "Campo_Trabajo",
-          ],
+      filtro_op1 = st.selectbox(
+          "Filtro Dinámico 1:",
+          ["(Ninguno)"] + columnas_disponibles,
+          index=(
+              columnas_disponibles.index("Turno") + 1
+              if "Turno" in columnas_disponibles
+              else 0
+          ),
       )
     with c_f3:
-      metrica_grafica = st.selectbox(
-          "Agrupar Gráfica por:",
-          [
-              "Maquina",
-              "Quien_Reporta",
-              "Turno",
-              "Campo_Trabajo",
-              "Departamento",
-          ],
+      filtro_op2 = st.selectbox(
+          "Filtro Dinámico 2:",
+          ["(Ninguno)"] + columnas_disponibles,
+          index=(
+              columnas_disponibles.index("Quien_Reporta") + 1
+              if "Quien_Reporta" in columnas_disponibles
+              else 0
+          ),
       )
 
+  # Selectores interactivos basados dinámicamente en las columnas seleccionadas
   f1, f2, f3 = st.columns(3)
   with f1:
-    deptos = (
-        ["Todos"] + list(df_all["Departamento"].dropna().unique())
-        if not df_all.empty and "Departamento" in df_all.columns
-        else ["Todos"]
-    )
-    f_dep = st.selectbox("Filtrar por Departamento", deptos)
+    val_col1 = "Todos"
+    if filtro_op1 != "(Ninguno)" and filtro_op1 in df_all.columns:
+      opts1 = ["Todos"] + list(df_all[filtro_op1].dropna().unique())
+      val_col1 = st.selectbox(f"Filtrar por {filtro_op1}", opts1)
+    else:
+      st.info("Filtro 1 inactivo")
+
   with f2:
-    maqs = (
-        ["Todas"] + list(df_all["Maquina"].dropna().unique())
-        if not df_all.empty and "Maquina" in df_all.columns
-        else ["Todas"]
-    )
-    f_maq = st.selectbox("Filtrar por Máquina", maqs)
+    val_col2 = "Todos"
+    if filtro_op2 != "(Ninguno)" and filtro_op2 in df_all.columns:
+      opts2 = ["Todos"] + list(df_all[filtro_op2].dropna().unique())
+      val_col2 = st.selectbox(f"Filtrar por {filtro_op2}", opts2)
+    else:
+      st.info("Filtro 2 inactivo")
+
   with f3:
-    tecnicos = (
-        ["Todos"] + list(df_all["Quien_Reporta"].dropna().unique())
-        if not df_all.empty and "Quien_Reporta" in df_all.columns
-        else ["Todos"]
+    # Buscador general de texto
+    texto_busqueda = st.text_input(
+        "Buscar texto en cualquier columna",
+        "",
+        placeholder="Escribe para buscar...",
     )
-    f_tec = st.selectbox("Filtrar por Quién Reporta", tecnicos)
 
-  f4, f5, f6 = st.columns(3)
-  with f4:
-    turnos_opts = (
-        ["Todos"] + list(df_all["Turno"].dropna().unique())
-        if not df_all.empty and "Turno" in df_all.columns
-        else ["Todos"]
-    )
-    f_turno = st.selectbox("Filtrar por Turno", turnos_opts)
-  with f5:
-    campos_opts = (
-        ["Todos"] + list(df_all["Campo_Trabajo"].dropna().unique())
-        if not df_all.empty and "Campo_Trabajo" in df_all.columns
-        else ["Todos"]
-    )
-    f_campo = st.selectbox("Filtrar por Campo de Trabajo", campos_opts)
-  with f6:
-    f_diag = st.text_input("Buscar en Diagnóstico", "")
-
-  # Aplicar filtros en cascada
+  # Aplicar filtros dinámicos al DataFrame
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
-    if f_dep != "Todos" and "Departamento" in df_view.columns:
-      df_view = df_view[df_view["Departamento"] == f_dep]
-    if f_maq != "Todas" and "Maquina" in df_view.columns:
-      df_view = df_view[df_view["Maquina"] == f_maq]
-    if f_tec != "Todos" and "Quien_Reporta" in df_view.columns:
-      df_view = df_view[df_view["Quien_Reporta"] == f_tec]
-    if f_turno != "Todos" and "Turno" in df_view.columns:
-      df_view = df_view[df_view["Turno"] == f_turno]
-    if f_campo != "Todos" and "Campo_Trabajo" in df_view.columns:
-      df_view = df_view[df_view["Campo_Trabajo"] == f_campo]
-    if f_diag and "Diagnostico" in df_view.columns:
-      df_view = df_view[
-          df_view["Diagnostico"].str.contains(f_diag, case=False, na=False)
-      ]
+    if (
+        filtro_op1 != "(Ninguno)"
+        and val_col1 != "Todos"
+        and filtro_op1 in df_view.columns
+    ):
+      df_view = df_view[df_view[filtro_op1] == val_col1]
+    if (
+        filtro_op2 != "(Ninguno)"
+        and val_col2 != "Todos"
+        and filtro_op2 in df_view.columns
+    ):
+      df_view = df_view[df_view[filtro_op2] == val_col2]
+    if texto_busqueda:
+      # Busca el texto en todo el dataframe de manera global
+      mask = df_view.astype(str).apply(
+          lambda x: x.str.contains(texto_busqueda, case=False, na=False)
+      ).any(axis=1)
+      df_view = df_view[mask]
 
   st.markdown("---")
   st.metric("Registros Encontrados (Filtrados)", len(df_view))
   st.dataframe(df_view, use_container_width=True)
 
   st.markdown("---")
-  st.subheader("📈 Gráfica Interactiva (Dinámica)")
-  if not df_view.empty and metrica_grafica in df_view.columns:
-    st.bar_chart(df_view[metrica_grafica].value_counts())
+  st.subheader(f"📈 Gráfica Interactiva agrupada por: {col_grafica}")
+  if not df_view.empty and col_grafica in df_view.columns:
+    st.bar_chart(df_view[col_grafica].value_counts())
   else:
     df_cero = pd.DataFrame({"Datos": ["Sin datos"], "Cantidad": [0]}).set_index(
         "Datos"
