@@ -603,3 +603,4 @@ elif menu == "Panel de Administración":
           "No hay suficientes datos bajo los filtros seleccionados para mostrar"
           " la gráfica."
       )
+        
