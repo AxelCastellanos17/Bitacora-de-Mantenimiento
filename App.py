@@ -372,7 +372,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 
 
 # ==============================================================================
-# 3. PANEL DE ADMINISTRACIÓN (Visualización, Descarga y Gráficas)
+# 3. PANEL DE ADMINISTRACIÓN (Con Filtros Avanzados y Gráficas)
 # ==============================================================================
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control Central")
@@ -403,7 +403,6 @@ elif menu == "Panel de Administración":
       st.rerun()
 
   st.markdown("---")
-
   df_all = st.session_state["bitacora_general"]
 
   if df_all.empty:
@@ -411,35 +410,89 @@ elif menu == "Panel de Administración":
         "No hay registros en el archivo Bitacora.xlsx o el archivo está vacío."
     )
   else:
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total de Reportes", len(df_all))
-    c2.metric(
-        "Departamentos",
-        df_all["Departamento"].nunique()
-        if "Departamento" in df_all.columns
-        else 0,
-    )
-    c3.metric(
-        "Máquinas con Falla",
-        df_all["Maquina"].nunique() if "Maquina" in df_all.columns else 0,
-    )
+    # ==========================================================================
+    # SECCIÓN DE FILTROS AVANZADOS
+    # ==========================================================================
+    st.subheader("🔍 Filtros de Búsqueda y Gráfica")
+
+    f_col1, f_col2, f_col3 = st.columns(3)
+
+    with f_col1:
+      # Filtro por Departamento
+      deptos_disponibles = ["Todos"] + list(df_all["Departamento"].dropna().unique()) if "Departamento" in df_all.columns else ["Todos"]
+      filtro_depto = st.selectbox("Filtrar por Departamento", deptos_disponibles)
+
+      # Filtro por Máquina
+      maquinas_disponibles = ["Todas"] + list(df_all["Maquina"].dropna().unique()) if "Maquina" in df_all.columns else ["Todas"]
+      filtro_maquina = st.selectbox("Filtrar por Máquina", maquinas_disponibles)
+
+    with f_col2:
+      # Filtro por Quien Reporta
+      tecnicos_disponibles = ["Todos"] + list(df_all["Quien_Reporta"].dropna().unique()) if "Quien_Reporta" in df_all.columns else ["Todos"]
+      filtro_tecnico = st.selectbox("Filtrar por Quién Reporta", tecnicos_disponibles)
+
+      # Filtro por Diagnóstico (Búsqueda de texto)
+      filtro_diag = st.text_input("Buscar en Diagnóstico", "")
+
+    with f_col3:
+      # Filtro por Solución (Búsqueda de texto)
+      filtro_sol = st.text_input("Buscar en Solución", "")
+
+      # Filtro por Rango de Fechas
+      st.write("**Filtrar por Rango de Fechas:**")
+      try:
+        df_all["Fecha_Temp"] = pd.to_datetime(df_all["Fecha"], errors="coerce")
+        min_f = df_all["Fecha_Temp"].min().date() if not df_all["Fecha_Temp"].isna().all() else datetime.today().date()
+        max_f = df_all["Fecha_Temp"].max().date() if not df_all["Fecha_Temp"].isna().all() else datetime.today().date()
+        rango_fechas = st.date_input("Rango", [min_f, max_f])
+      except:
+        rango_fechas = []
+
+    # ==========================================================================
+    # APLICACIÓN DE LOS FILTROS
+    # ==========================================================================
+    df_view = df_all.copy()
+
+    if filtro_depto != "Todos" and "Departamento" in df_view.columns:
+      df_view = df_view[df_view["Departamento"] == filtro_depto]
+
+    if filtro_maquina != "Todas" and "Maquina" in df_view.columns:
+      df_view = df_view[df_view["Maquina"] == filtro_maquina]
+
+    if filtro_tecnico != "Todos" and "Quien_Reporta" in df_view.columns:
+      df_view = df_view[df_view["Quien_Reporta"] == filtro_tecnico]
+
+    if filtro_diag and "Diagnostico" in df_view.columns:
+      df_view = df_view[df_view["Diagnostico"].str.contains(filtro_diag, case=False, na=False)]
+
+    if filtro_sol and "Solucion" in df_view.columns:
+      df_view = df_view[df_view["Solucion"].str.contains(filtro_sol, case=False, na=False)]
+
+    if len(rango_fechas) == 2 and "Fecha_Temp" in df_view.columns:
+      f_inicio, f_fin = rango_fechas
+      df_view = df_view[(df_view["Fecha_Temp"].dt.date >= f_inicio) & (df_view["Fecha_Temp"].dt.date <= f_fin)]
+
+    # Limpiar columna temporal de fecha para la tabla visual
+    if "Fecha_Temp" in df_view.columns:
+      df_view = df_view.drop(columns=["Fecha_Temp"])
 
     st.markdown("---")
-    filtro = st.selectbox(
-        "Filtrar por Departamento",
-        ["Todos"] + list(st.session_state["departamentos"]),
-    )
 
-    if filtro != "Todos" and "Departamento" in df_all.columns:
-      df_view = df_all[df_all["Departamento"] == filtro]
-    else:
-      df_view = df_all
+    # MÉTRICAS DINÁMICAS BASADAS EN EL FILTRO
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Reportes Filtrados", len(df_view))
+    c2.metric("Departamentos en Vista", df_view["Departamento"].nunique() if "Departamento" in df_view.columns else 0)
+    c3.metric("Máquinas en Vista", df_view["Maquina"].nunique() if "Maquina" in df_view.columns else 0)
 
-    st.subheader("Historial de Registros")
+    st.markdown("---")
+    st.subheader("📋 Historial de Registros Filtrados")
     st.dataframe(df_view, use_container_width=True)
 
+    # GRÁFICA DINÁMICA QUE RESPONDE A LOS FILTROS
     st.markdown("---")
-    st.subheader("📈 Estadísticas de Fallas por Máquina")
+    st.subheader("📈 Estadísticas de Fallas (Según Filtros Aplicados)")
     if not df_view.empty and "Maquina" in df_view.columns:
       conteo_maquinas = df_view["Maquina"].value_counts()
       st.bar_chart(conteo_maquinas)
+    else:
+      st.info("No hay suficientes datos bajo los filtros seleccionados para mostrar la gráfica.")
