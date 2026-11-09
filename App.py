@@ -319,3 +319,57 @@ elif menu == "Panel de Administración":
         "Máquinas"
     )
     st.bar_chart(df_cero)
+# ============================================================================
+  # NUEVA OPCIÓN: PEGAR FILAS Y COLUMNAS DIRECTAMENTE
+  # ============================================================================
+  st.markdown("---")
+  st.subheader("📋 Pegar Datos Directamente (Copia y Pega desde Excel)")
+  st.write(
+      "Selecciona tus celdas en Excel, cópialas (Ctrl + C) y pégalas aquí"
+      " (Ctrl + V):"
+  )
+
+  texto_pegado = st.text_area(
+      "Pega tu tabla de Excel aquí (con encabezados incluidos):",
+      height=150,
+      placeholder="Pega aquí los datos copiados de Excel...",
+  )
+
+  if st.button("📥 Procesar y Agregar Datos Pegados"):
+    if texto_pegado:
+      try:
+        import io
+        import pandas as pd
+
+        # Lee el texto tabulado (formato estándar al copiar desde Excel)
+        df_pegado = pd.read_csv(io.StringIO(texto_pegado), sep="\t")
+
+        if not df_pegado.empty:
+          # Une los nuevos datos con los existentes sin borrar nada
+          st.session_state["bitacora_general"] = pd.concat(
+              [st.session_state["bitacora_general"], df_pegado],
+              ignore_index=True,
+              sort=False,
+          )
+
+          # Guarda los cambios automáticamente en el archivo Excel local
+          try:
+            st.session_state["bitacora_general"].to_excel(
+                EXCEL_FILE, index=False
+            )
+          except:
+            pass
+
+          st.success(
+              f"✅ ¡Se agregaron {len(df_pegado)} registros nuevos con éxito!"
+          )
+          st.rerun()
+        else:
+          st.warning("El texto pegado no contiene datos válidos.")
+      except Exception as ex:
+        st.error(
+            f"Error al procesar los datos pegados. Asegúrate de copiar los"
+            f" encabezados de Excel. Detalle: {ex}"
+        )
+    else:
+      st.warning("Por favor pega los datos en el cuadro de texto antes de procesar.")
