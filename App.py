@@ -23,7 +23,6 @@ menu = st.sidebar.selectbox(
     ],
 )
 
-
 # CARGA DIRECTA Y ACTUALIZADA DESDE GITHUB
 try:
   st.session_state["bitacora_general"] = pd.read_excel("Bitacora.xlsx")
@@ -45,23 +44,6 @@ except Exception as e:
           "Observaciones",
       ]
   )
-    st.session_state["bitacora_general"] = pd.DataFrame(
-        columns=[
-            "Fecha",
-            "Departamento",
-            "Turno",
-            "Quien_Reporta",
-            "Maquina",
-            "Seccion_Maquina",
-            "Campo_Trabajo",
-            "Diagnostico",
-            "Solucion",
-            "Repuesto",
-            "Hora_Inicial",
-            "Hora_Final",
-            "Observaciones",
-        ]
-    )
 
 # Departamentos y estructura avanzada de formatos
 if "departamentos" not in st.session_state:
@@ -352,7 +334,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
               f"{nombre_c}", lista_opciones
           )
         elif tipo_c == "Fecha":
-          respuestas_dinamicals[nombre_c] = str(
+          respuestas_dinamicas[nombre_c] = str(
               st.date_input(f"{nombre_c}", value=datetime.today())
           )
 
@@ -460,12 +442,10 @@ elif menu == "Panel de Administración":
             else []
         )
     )
-    # Eliminar duplicados manteniendo el orden
     maquinas_disponibles = list(dict.fromkeys(maquinas_disponibles))
     filtro_maquina = st.selectbox("Filtrar por Máquina", maquinas_disponibles)
 
   with f_col2:
-    # Lista predeterminada de técnicos oficiales + los que vengan en el archivo
     tecnicos_oficiales = [
         "Carlos Castellanos",
         "Axel Castellanos",
