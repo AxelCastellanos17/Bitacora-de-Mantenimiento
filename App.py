@@ -331,10 +331,10 @@ elif menu == "Panel de Administración":
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
   # ============================================================================
-  # FILTROS Y GRÁFICA DINÁMICA USANDO LAS COLUMNAS REALES DE TU ARCHIVO
+  # TABLA DINÁMICA CRUZADA Y FILTROS (ESTILO EXCEL)
   # ============================================================================
   st.markdown("---")
-  st.subheader("🔍 Filtros de Búsqueda y Gráfica Dinámica")
+  st.subheader("🔍 Tabla Dinámica y Gráfica por Tipo de Falla / Tiempos Muertos")
 
   df_all = st.session_state["bitacora_general"]
   columnas_disponibles = (
@@ -351,13 +351,13 @@ elif menu == "Panel de Administración":
   )
 
   with st.expander(
-      "⚙️ Configurar campos de la Gráfica y Filtros (Estilo Tabla Dinámica)",
+      "⚙️ Configuración de Filas y Columnas (Estilo Tabla Dinámica de Excel)",
       expanded=True,
   ):
     c_f1, c_f2, c_f3 = st.columns(3)
     with c_f1:
-      col_grafica = st.selectbox(
-          "Agrupar Gráfica por (Primer Fila / Columna):",
+      col_filas = st.selectbox(
+          "Filas (Ej. Maquina):",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Maquina")
@@ -366,64 +366,56 @@ elif menu == "Panel de Administración":
           ),
       )
     with c_f2:
-      filtro_op1 = st.selectbox(
-          "Filtro Dinámico 1:",
-          ["(Ninguno)"] + columnas_disponibles,
+      col_columnas = st.selectbox(
+          "Columnas (Ej. Fecha / Semana):",
+          columnas_disponibles,
           index=(
-              columnas_disponibles.index("Turno") + 1
-              if "Turno" in columnas_disponibles
+              columnas_disponibles.index("Fecha")
+              if "Fecha" in columnas_disponibles
               else 0
           ),
       )
     with c_f3:
-      filtro_op2 = st.selectbox(
-          "Filtro Dinámico 2:",
-          ["(Ninguno)"] + columnas_disponibles,
+      col_valor = st.selectbox(
+          "Valores / Conteo (Ej. Diagnostico o Turno):",
+          columnas_disponibles,
           index=(
-              columnas_disponibles.index("Quien_Reporta") + 1
-              if "Quien_Reporta" in columnas_disponibles
+              columnas_disponibles.index("Diagnostico")
+              if "Diagnostico" in columnas_disponibles
               else 0
           ),
       )
 
+  # Filtros laterales o superiores rápidos
   f1, f2, f3 = st.columns(3)
   with f1:
-    val_col1 = "Todos"
-    if filtro_op1 != "(Ninguno)" and filtro_op1 in df_all.columns:
-      opts1 = ["Todos"] + list(df_all[filtro_op1].dropna().unique())
-      val_col1 = st.selectbox(f"Filtrar por {filtro_op1}", opts1)
-    else:
-      st.info("Filtro 1 inactivo")
-
+    turno_opts = (
+        ["Todos"] + list(df_all["Turno"].dropna().unique())
+        if not df_all.empty and "Turno" in df_all.columns
+        else ["Todos"]
+    )
+    f_turno = st.selectbox("Filtrar por Turno", turno_opts)
   with f2:
-    val_col2 = "Todos"
-    if filtro_op2 != "(Ninguno)" and filtro_op2 in df_all.columns:
-      opts2 = ["Todos"] + list(df_all[filtro_op2].dropna().unique())
-      val_col2 = st.selectbox(f"Filtrar por {filtro_op2}", opts2)
-    else:
-      st.info("Filtro 2 inactivo")
-
+    rep_opts = (
+        ["Todos"] + list(df_all["Quien_Reporta"].dropna().unique())
+        if not df_all.empty and "Quien_Reporta" in df_all.columns
+        else ["Todos"]
+    )
+    f_rep = st.selectbox("Filtrar por Quién Reporta", rep_opts)
   with f3:
     texto_busqueda = st.text_input(
-        "Buscar texto en cualquier columna",
+        "Buscar en Descripciones / Diagnóstico",
         "",
-        placeholder="Escribe para buscar...",
+        placeholder="Filtro de texto...",
     )
 
+  # Aplicar filtros
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
-    if (
-        filtro_op1 != "(Ninguno)"
-        and val_col1 != "Todos"
-        and filtro_op1 in df_view.columns
-    ):
-      df_view = df_view[df_view[filtro_op1] == val_col1]
-    if (
-        filtro_op2 != "(Ninguno)"
-        and val_col2 != "Todos"
-        and filtro_op2 in df_view.columns
-    ):
-      df_view = df_view[df_view[filtro_op2] == val_col2]
+    if f_turno != "Todos" and "Turno" in df_view.columns:
+      df_view = df_view[df_view["Turno"] == f_turno]
+    if f_rep != "Todos" and "Quien_Reporta" in df_view.columns:
+      df_view = df_view[df_view["Quien_Reporta"] == f_rep]
     if texto_busqueda:
       mask = df_view.astype(str).apply(
           lambda x: x.str.contains(texto_busqueda, case=False, na=False)
@@ -431,13 +423,33 @@ elif menu == "Panel de Administración":
       df_view = df_view[mask]
 
   st.markdown("---")
-  st.metric("Registros Encontrados (Filtrados)", len(df_view))
-  st.dataframe(df_view, use_container_width=True)
+  st.subheader("📋 Tabla Cruzada Estilo Dinámica (Filas vs Columnas)")
+
+  if not df_view.empty and col_filas in df_view.columns and col_columnas in df_view.columns:
+    try:
+      # Creamos la tabla cruzada tipo Excel (Pivot Table)
+      tabla_dinamica = pd.pivot_table(
+          df_view,
+          index=col_filas,
+          columns=col_columnas,
+          values=col_valor,
+          aggfunc="count",
+          fill_value=0,
+      )
+      st.dataframe(tabla_dinamica, use_container_width=True)
+    except Exception as ex:
+      st.warning(
+          "No se pudo generar la tabla cruzada con las columnas seleccionadas."
+          f" Detalle: {ex}"
+      )
+      st.dataframe(df_view, use_container_width=True)
+  else:
+    st.info("Sube datos o pégalos para visualizar la tabla dinámica cruzada.")
 
   st.markdown("---")
-  st.subheader(f"📈 Gráfica Interactiva agrupada por: {col_grafica}")
-  if not df_view.empty and col_grafica in df_view.columns:
-    st.bar_chart(df_view[col_grafica].value_counts())
+  st.subheader(f"📈 Gráfica Interactiva basada en: {col_filas}")
+  if not df_view.empty and col_filas in df_view.columns:
+    st.bar_chart(df_view[col_filas].value_counts())
   else:
     df_cero = pd.DataFrame({"Datos": ["Sin datos"], "Cantidad": [0]}).set_index(
         "Datos"
