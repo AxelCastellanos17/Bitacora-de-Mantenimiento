@@ -443,4 +443,3 @@ elif menu == "Panel de Administración":
         "Datos"
     )
     st.bar_chart(df_cero)
-      
