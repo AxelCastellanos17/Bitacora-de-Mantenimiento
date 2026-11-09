@@ -23,25 +23,28 @@ menu = st.sidebar.selectbox(
     ],
 )
 
-# Base de datos general en memoria
+# CARGA AUTOMÁTICA DE LA BITÁCORA DESDE EL REPOSITORIO
 if "bitacora_general" not in st.session_state:
-  st.session_state["bitacora_general"] = pd.DataFrame(
-      columns=[
-          "Fecha",
-          "Departamento",
-          "Turno",
-          "Quien_Reporta",
-          "Maquina",
-          "Seccion_Maquina",
-          "Campo_Trabajo",
-          "Diagnostico",
-          "Solucion",
-          "Repuesto",
-          "Hora_Inicial",
-          "Hora_Final",
-          "Observaciones",
-      ]
-  )
+  try:
+    st.session_state["bitacora_general"] = pd.read_excel("Bitacora.xlsx")
+  except Exception as e:
+    st.session_state["bitacora_general"] = pd.DataFrame(
+        columns=[
+            "Fecha",
+            "Departamento",
+            "Turno",
+            "Quien_Reporta",
+            "Maquina",
+            "Seccion_Maquina",
+            "Campo_Trabajo",
+            "Diagnostico",
+            "Solucion",
+            "Repuesto",
+            "Hora_Inicial",
+            "Hora_Final",
+            "Observaciones",
+        ]
+    )
 
 # Departamentos y estructura avanzada de formatos
 if "departamentos" not in st.session_state:
@@ -104,15 +107,17 @@ if not df_general.empty:
       for idx, row in df_semana.tail(5).iterrows():
         with st.sidebar.container():
           st.markdown(
-              f"🛠️ **{row['Maquina']}** ({row['Departamento']})"
-              f"\n\n📝 *{row['Diagnostico']}*"
-              f"\n\n👤 *Rep: {row['Quien_Reporta']}* | 🕒 *{row['Fecha']}*"
+              f"🛠️ **{row.get('Maquina', 'N/A')}**"
+              f" ({row.get('Departamento', 'N/A')})"
+              f"\n\n📝 *{row.get('Diagnostico', 'N/A')}*"
+              f"\n\n👤 *Rep: {row.get('Quien_Reporta', 'N/A')}* | 🕒"
+              f" *{row.get('Fecha', 'N/A')}*"
           )
           st.markdown("---")
     else:
       st.sidebar.info("No hay reportes en este ciclo semanal.")
   except:
-    st.sidebar.info("Registra fallas para activar el feed.")
+    st.sidebar.info("Revisa el formato de tus fechas en Excel.")
 else:
   st.sidebar.info("Esperando nuevos reportes...")
 
@@ -367,38 +372,13 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 
 
 # ==============================================================================
-# 3. PANEL DE ADMINISTRACIÓN (Subida, Descarga, Actualización y Gráficas)
+# 3. PANEL DE ADMINISTRACIÓN (Visualización, Descarga y Gráficas)
 # ==============================================================================
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control Central")
 
-  # SECCIÓN DE GESTIÓN Y BARRIDO DE ARCHIVOS
-  st.subheader("📂 Gestión, Sincronización y Respaldo")
-  col_sub, col_desc, col_act = st.columns(3)
-
-  with col_sub:
-    st.write("**Subir Reportes Viejos:**")
-    archivo_subido = st.file_uploader(
-        "Archivo histórico (.xlsx, .csv)", type=["xlsx", "csv"], key="subir_viejos"
-    )
-    if archivo_subido is not None:
-      try:
-        if archivo_subido.name.endswith(".csv"):
-          df_carga = pd.read_csv(archivo_subido)
-        else:
-          df_carga = pd.read_excel(archivo_subido)
-
-        st.session_state["bitacora_general"] = pd.concat(
-            [st.session_state["bitacora_general"], df_carga],
-            ignore_index=True,
-            sort=False,
-        )
-        st.success("¡Datos históricos integrados!")
-      except Exception as e:
-        st.error(f"Error al leer: {e}")
-
+  col_desc, col_act = st.columns(2)
   with col_desc:
-    st.write("**Descargar Respaldo:**")
     df_all = st.session_state["bitacora_general"]
     if not df_all.empty:
       output = io.BytesIO()
@@ -412,18 +392,14 @@ elif menu == "Panel de Administración":
       excel_data = output.getvalue()
 
       st.download_button(
-          label="📥 Descargar Excel",
+          label="📥 Descargar Respaldo Actualizado",
           data=excel_data,
           file_name=f"Bitacora_Mantenimiento_{datetime.today().strftime('%Y-%m-%d')}.xlsx",
           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       )
-    else:
-      st.info("Sin datos para exportar.")
 
   with col_act:
-    st.write("**Actualizar Vista:**")
-    st.write("Forzar barrido y recarga.")
-    if st.button("🔄 Actualizar / Refrescar Página"):
+    if st.button("🔄 Actualizar / Refrescar Datos"):
       st.rerun()
 
   st.markdown("---")
@@ -432,14 +408,21 @@ elif menu == "Panel de Administración":
 
   if df_all.empty:
     st.info(
-        "Aún no hay reportes registrados. Sube tu archivo histórico arriba o"
-        " registra una falla."
+        "No hay registros en el archivo Bitacora.xlsx o el archivo está vacío."
     )
   else:
     c1, c2, c3 = st.columns(3)
     c1.metric("Total de Reportes", len(df_all))
-    c2.metric("Departamentos", df_all["Departamento"].nunique())
-    c3.metric("Máquinas con Falla", df_all["Maquina"].nunique())
+    c2.metric(
+        "Departamentos",
+        df_all["Departamento"].nunique()
+        if "Departamento" in df_all.columns
+        else 0,
+    )
+    c3.metric(
+        "Máquinas con Falla",
+        df_all["Maquina"].nunique() if "Maquina" in df_all.columns else 0,
+    )
 
     st.markdown("---")
     filtro = st.selectbox(
@@ -447,7 +430,7 @@ elif menu == "Panel de Administración":
         ["Todos"] + list(st.session_state["departamentos"]),
     )
 
-    if filtro != "Todos":
+    if filtro != "Todos" and "Departamento" in df_all.columns:
       df_view = df_all[df_all["Departamento"] == filtro]
     else:
       df_view = df_all
@@ -460,23 +443,3 @@ elif menu == "Panel de Administración":
     if not df_view.empty and "Maquina" in df_view.columns:
       conteo_maquinas = df_view["Maquina"].value_counts()
       st.bar_chart(conteo_maquinas)
-
-    if st.button("⚠️ Borrar Base de Datos Temporal"):
-      st.session_state["bitacora_general"] = pd.DataFrame(
-          columns=[
-              "Fecha",
-              "Departamento",
-              "Turno",
-              "Quien_Reporta",
-              "Maquina",
-              "Seccion_Maquina",
-              "Campo_Trabajo",
-              "Diagnostico",
-              "Solucion",
-              "Repuesto",
-              "Hora_Inicial",
-              "Hora_Final",
-              "Observaciones",
-          ]
-      )
-      st.rerun()
