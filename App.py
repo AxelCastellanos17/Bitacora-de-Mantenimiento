@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import streamlit as st
 
+# Configuración de la página web
 st.set_page_config(
     page_title="Reporte de Fallas - Mantenimiento C.H",
     page_icon="🔧",
@@ -13,6 +14,7 @@ st.set_page_config(
 st.title("🔧 Sistema Integral de Reportes de Fallas C.H")
 st.markdown("---")
 
+# Menú lateral para navegar entre módulos
 menu = st.sidebar.selectbox(
     "Selecciona el Módulo",
     [
@@ -22,8 +24,10 @@ menu = st.sidebar.selectbox(
     ],
 )
 
+# ARCHIVO EXCEL LOCAL PARA PERSISTENCIA
 EXCEL_FILE = "Bitacora.xlsx"
 
+# CARGA AUTOMÁTICA DE LA BITÁCORA
 if "bitacora_general" not in st.session_state:
   if os.path.exists(EXCEL_FILE):
     try:
@@ -49,13 +53,14 @@ if "bitacora_general" not in st.session_state:
         ]
     )
 
+# Departamentos y estructura avanzada de formatos
 if "departamentos" not in st.session_state:
   st.session_state["departamentos"] = [
       "Departamento de Mantenimiento CH",
       "Moldes",
       "Administración",
   ]
-# Estructura avanzada de formatos por departamento
+
 if "formatos_deptos_avanzado" not in st.session_state:
   st.session_state["formatos_deptos_avanzado"] = {
       "Departamento de Mantenimiento CH": [
@@ -380,7 +385,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
                   if col in st.session_state["bitacora_general"].columns
               ]
           )
-          limpio_df.to_excel("Bitacora.xlsx", index=False)
+          limpio_df.to_excel(EXCEL_FILE, index=False)
         except Exception as ex:
           st.warning(
               f"Reporte agregado a la sesión, pero error al persistir: {ex}"
@@ -390,12 +395,13 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 
 
 # ==============================================================================
-# 3. PANEL DE ADMINISTRACIÓN (Con Filtros y Gráficas)
+# 3. PANEL DE ADMINISTRACIÓN (Con Filtros, Gráficas e Indicador de Archivo)
 # ==============================================================================
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control Central")
 
   col_desc, col_act = st.columns(2)
+
   with col_desc:
     df_all = st.session_state["bitacora_general"]
     if not df_all.empty:
@@ -421,9 +427,21 @@ elif menu == "Panel de Administración":
       )
 
   with col_act:
+    # INDICADOR VISUAL DEL ARCHIVO BASE QUE ESTÁ LEYENDO LA PÁGINA
+    if os.path.exists(EXCEL_FILE):
+      st.info(
+          f"📂 **Base de datos activa:** `{EXCEL_FILE}` ({len(df_all)}"
+          " registros leídos)"
+      )
+    else:
+      st.warning(
+          f"⚠️ **Base de datos:** El archivo `{EXCEL_FILE}` no se encuentra en la"
+          " ruta."
+      )
+
     if st.button("🔄 Actualizar / Refrescar Datos"):
-      if os.path.exists("Bitacora.xlsx"):
-        st.session_state["bitacora_general"] = pd.read_excel("Bitacora.xlsx")
+      if os.path.exists(EXCEL_FILE):
+        st.session_state["bitacora_general"] = pd.read_excel(EXCEL_FILE)
       st.rerun()
 
   st.markdown("---")
