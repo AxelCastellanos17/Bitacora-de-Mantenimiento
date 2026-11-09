@@ -241,28 +241,34 @@ elif menu == "Panel de Administración":
     archivo_subido = st.file_uploader(
         "📂 Abrir archivo (Excel, CSV o Texto)", type=["xlsx", "csv", "txt"]
     )
+    # Se usa una clave única para procesar el archivo una sola vez y evitar bucles
     if archivo_subido is not None:
-      try:
-        nombre_archivo = archivo_subido.name.lower()
-        if nombre_archivo.endswith(".csv"):
-          st.session_state["bitacora_general"] = pd.read_csv(
-              archivo_subido, encoding="latin-1"
-          )
-        elif nombre_archivo.endswith(".txt"):
-          st.session_state["bitacora_general"] = pd.read_csv(
-              archivo_subido, sep=None, engine="python", encoding="latin-1"
-          )
-        else:
-          st.session_state["bitacora_general"] = pd.read_excel(archivo_subido)
+      if "archivo_procesado" not in st.session_state or st.session_state[
+          "archivo_procesado"
+      ] != archivo_subido.name:
+        try:
+          nombre_archivo = archivo_subido.name.lower()
+          if nombre_archivo.endswith(".csv"):
+            st.session_state["bitacora_general"] = pd.read_csv(
+                archivo_subido, encoding="latin-1"
+            )
+          elif nombre_archivo.endswith(".txt"):
+            st.session_state["bitacora_general"] = pd.read_csv(
+                archivo_subido, sep=None, engine="python", encoding="latin-1"
+            )
+          else:
+            st.session_state["bitacora_general"] = pd.read_excel(
+                archivo_subido
+            )
 
-        st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
-        st.success(
-            f"✅ Archivo abierto y guardado con éxito"
-            f" ({len(st.session_state['bitacora_general'])} registros)"
-        )
-        st.rerun()
-      except Exception as e:
-        st.error(f"Error al abrir el archivo: {e}")
+          st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
+          st.session_state["archivo_procesado"] = archivo_subido.name
+          st.success(
+              f"✅ Archivo abierto y guardado con éxito"
+              f" ({len(st.session_state['bitacora_general'])} registros)"
+          )
+        except Exception as e:
+          st.error(f"Error al abrir el archivo: {e}")
 
   with col_b:
     st.write("🗑️ **Gestión de Datos**")
@@ -284,6 +290,8 @@ elif menu == "Panel de Administración":
               "Observaciones",
           ]
       )
+      if "archivo_procesado" in st.session_state:
+        del st.session_state["archivo_procesado"]
       if os.path.exists(EXCEL_FILE):
         try:
           os.remove(EXCEL_FILE)
