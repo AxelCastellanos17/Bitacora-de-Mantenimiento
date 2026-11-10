@@ -354,7 +354,7 @@ elif menu == "Panel de Administración":
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
   # ============================================================================
-  # PANEL DE FILTROS Y CONFIGURACIÓN DE MATRIZ CON FILTRO JERÁRQUICO (AÑO/MES/DÍA)
+  # PANEL DE FILTROS Y CONFIGURACIÓN DE MATRIZ CON FILTRO JERÁRQUICO (AÑO / MES[CHECK] / DÍA)
   # ============================================================================
   st.markdown("---")
   st.subheader("⚙️ Panel de Filtros y Configuración de Matriz")
@@ -410,30 +410,24 @@ elif menu == "Panel de Administración":
 
     st.markdown("### 🔍 Filtros Interactivos Internos")
 
-    # PREPARACIÓN DE DATOS TEMPORALES PARA EL FILTRO JERÁRQUICO (AÑO ➔ MES ➔ DÍA)
+    # PREPARACIÓN DE DATOS TEMPORALES PARA EL FILTRO JERÁRQUICO
     df_temp_filtro = df_all.copy()
     if not df_temp_filtro.empty and col_columnas in df_temp_filtro.columns:
-      # Intentar convertir la columna de fechas a datetime para extraer año, mes y día de forma limpia
       df_temp_filtro["_dt_temp"] = pd.to_datetime(
           df_temp_filtro[col_columnas], errors="coerce"
       )
       if df_temp_filtro["_dt_temp"].notna().sum() > 0:
+        # Extraer el año como entero limpio sin decimales
         df_temp_filtro["_Anio"] = (
-            df_temp_filtro["_dt_temp"].dt.year.astype(str)
+            df_temp_filtro["_dt_temp"].dt.year.fillna(0).astype(int).astype(str)
         )
         df_temp_filtro["_Mes"] = df_temp_filtro["_dt_temp"].dt.strftime("%B")
-        df_temp_filtro["_Dia"] = (
-            df_temp_filtro["_dt_temp"].dt.strftime("%Y-%m-%d")
-        )
       else:
-        # Si son textos como '31-oct', los usamos directamente
         df_temp_filtro["_Anio"] = "General"
-        df_temp_filtro["_Mes"] = "Meses Disponibles"
-        df_temp_filtro["_Dia"] = df_temp_filtro[col_columnas].astype(str)
+        df_temp_filtro["_Mes"] = "General"
     else:
       df_temp_filtro["_Anio"] = "General"
       df_temp_filtro["_Mes"] = "General"
-      df_temp_filtro["_Dia"] = ""
 
     f_col1, f_col2, f_col3, f_col4 = st.columns(4)
 
@@ -451,7 +445,7 @@ elif menu == "Panel de Administración":
       else:
         maq_seleccionadas = []
 
-    # 2. SELECCIÓN JERÁRQUICA: AÑO ➔ MES ➔ DÍA
+    # 2. SELECCIÓN JERÁRQUICA CORREGIDA: AÑO ➔ MESES (CON CHECK/MULTISELECT) ➔ DÍAS
     with f_col2:
       if not df_temp_filtro.empty:
         anios_disp = sorted(
@@ -459,19 +453,23 @@ elif menu == "Panel de Administración":
         )
         anio_elegido = st.selectbox("📅 Seleccionar Año", anios_disp)
 
-        df_mes_filtrado = df_temp_filtro[
+        df_anio_filtrado = df_temp_filtro[
             df_temp_filtro["_Anio"] == anio_elegido
         ]
         meses_disp = sorted(
-            list(df_mes_filtrado["_Mes"].dropna().astype(str).unique())
+            list(df_anio_filtrado["_Mes"].dropna().astype(str).unique())
         )
-        mes_elegido = st.selectbox("📂 Seleccionar Mes", meses_disp)
 
-        df_dia_filtrado = df_mes_filtrado[
-            df_mes_filtrado["_Mes"] == mes_elegido
+        # Meses con multiselección (casillas de verificación)
+        meses_seleccionados = st.multiselect(
+            "📂 Seleccionar Mes(es)", options=meses_disp, default=meses_disp
+        )
+
+        df_mes_filtrado = df_anio_filtrado[
+            df_anio_filtrado["_Mes"].isin(meses_seleccionados)
         ]
         dias_disp = sorted(
-            list(df_dia_filtrado[col_columnas].dropna().astype(str).unique())
+            list(df_mes_filtrado[col_columnas].dropna().astype(str).unique())
         )
         dias_seleccionados = st.multiselect(
             "📌 Seleccionar Días", options=dias_disp, default=dias_disp
