@@ -24,11 +24,23 @@ menu = st.sidebar.selectbox(
 
 EXCEL_FILE = "Bitacora.xlsx"
 
+
+# Función auxiliar para limpiar espacios fantasma en los textos y nombres
+def limpiar_dataframe(df):
+  if df.empty:
+    return df
+  for col in df.select_dtypes(include=["object"]).columns:
+    df[col] = df[col].astype(str).str.strip()
+  return df
+
+
 # PERSISTENCIA AUTOMÁTICA: Carga los datos guardados al iniciar la app
 if "bitacora_general" not in st.session_state:
   if os.path.exists(EXCEL_FILE):
     try:
-      st.session_state["bitacora_general"] = pd.read_excel(EXCEL_FILE)
+      st.session_state["bitacora_general"] = limpiar_dataframe(
+          pd.read_excel(EXCEL_FILE)
+      )
     except:
       st.session_state["bitacora_general"] = pd.DataFrame()
   else:
@@ -213,6 +225,9 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             [st.session_state["bitacora_general"], df_nuevo],
             ignore_index=True,
         )
+        st.session_state["bitacora_general"] = limpiar_dataframe(
+            st.session_state["bitacora_general"]
+        )
         try:
           st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
         except Exception as ex:
@@ -248,18 +263,15 @@ elif menu == "Panel de Administración":
         try:
           nombre_archivo = archivo_subido.name.lower()
           if nombre_archivo.endswith(".csv"):
-            st.session_state["bitacora_general"] = pd.read_csv(
-                archivo_subido, encoding="latin-1"
-            )
+            df_temp = pd.read_csv(archivo_subido, encoding="latin-1")
           elif nombre_archivo.endswith(".txt"):
-            st.session_state["bitacora_general"] = pd.read_csv(
+            df_temp = pd.read_csv(
                 archivo_subido, sep=None, engine="python", encoding="latin-1"
             )
           else:
-            st.session_state["bitacora_general"] = pd.read_excel(
-                archivo_subido
-            )
+            df_temp = pd.read_excel(archivo_subido)
 
+          st.session_state["bitacora_general"] = limpiar_dataframe(df_temp)
           st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
           st.session_state["archivo_procesado"] = archivo_subido.name
           st.success(
@@ -314,10 +326,14 @@ elif menu == "Panel de Administración":
             io.StringIO(texto_pegado), sep="\t", encoding="latin-1"
         )
         if not df_pegado.empty:
+          df_pegado = limpiar_dataframe(df_pegado)
           st.session_state["bitacora_general"] = pd.concat(
               [st.session_state["bitacora_general"], df_pegado],
               ignore_index=True,
               sort=False,
+          )
+          st.session_state["bitacora_general"] = limpiar_dataframe(
+              st.session_state["bitacora_general"]
           )
           try:
             st.session_state["bitacora_general"].to_excel(
@@ -398,7 +414,9 @@ elif menu == "Panel de Administración":
     # 1. Filtro Multiselección de Máquinas / Filas
     with f_col1:
       if not df_all.empty and col_filas in df_all.columns:
-        maquinas_disponibles = list(df_all[col_filas].dropna().unique())
+        maquinas_disponibles = sorted(
+            list(df_all[col_filas].dropna().astype(str).unique())
+        )
         maq_seleccionadas = st.multiselect(
             f"Filtrar {col_filas}",
             options=maquinas_disponibles,
@@ -410,7 +428,9 @@ elif menu == "Panel de Administración":
     # 2. Filtro Multiselección de Fechas / Columnas
     with f_col2:
       if not df_all.empty and col_columnas in df_all.columns:
-        fechas_disponibles = list(df_all[col_columnas].dropna().unique())
+        fechas_disponibles = sorted(
+            list(df_all[col_columnas].dropna().astype(str).unique())
+        )
         fechas_seleccionadas = st.multiselect(
             f"Filtrar {col_columnas}",
             options=fechas_disponibles,
@@ -422,7 +442,8 @@ elif menu == "Panel de Administración":
     # 3. Filtro por Turno
     with f_col3:
       turno_opts = (
-          ["Todos"] + list(df_all["Turno"].dropna().unique())
+          ["Todos"]
+          + sorted(list(df_all["Turno"].dropna().astype(str).unique()))
           if not df_all.empty and "Turno" in df_all.columns
           else ["Todos"]
       )
@@ -431,7 +452,8 @@ elif menu == "Panel de Administración":
     # 4. Filtro por Quién Reporta
     with f_col4:
       rep_opts = (
-          ["Todos"] + list(df_all["Quien_Reporta"].dropna().unique())
+          ["Todos"]
+          + sorted(list(df_all["Quien_Reporta"].dropna().astype(str).unique()))
           if not df_all.empty and "Quien_Reporta" in df_all.columns
           else ["Todos"]
       )
@@ -447,13 +469,17 @@ elif menu == "Panel de Administración":
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
     if maq_seleccionadas and col_filas in df_view.columns:
-      df_view = df_view[df_view[col_filas].isin(maq_seleccionadas)]
+      df_view = df_view[
+          df_view[col_filas].astype(str).isin(maq_seleccionadas)
+      ]
     if fechas_seleccionadas and col_columnas in df_view.columns:
-      df_view = df_view[df_view[col_columnas].isin(fechas_seleccionadas)]
+      df_view = df_view[
+          df_view[col_columnas].astype(str).isin(fechas_seleccionadas)
+      ]
     if f_turno != "Todos" and "Turno" in df_view.columns:
-      df_view = df_view[df_view["Turno"] == f_turno]
+      df_view = df_view[df_view["Turno"].astype(str) == f_turno]
     if f_rep != "Todos" and "Quien_Reporta" in df_view.columns:
-      df_view = df_view[df_view["Quien_Reporta"] == f_rep]
+      df_view = df_view[df_view["Quien_Reporta"].astype(str) == f_rep]
     if texto_busqueda:
       mask = (
           df_view.astype(str)
