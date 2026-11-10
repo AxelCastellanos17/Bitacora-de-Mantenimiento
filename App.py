@@ -338,7 +338,7 @@ elif menu == "Panel de Administración":
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
   # ============================================================================
-  # PANEL DE FILTROS Y CONFIGURACIÓN DE MATRIZ + GRÁFICA DE BARRAS APILADAS
+  # PANEL DE FILTROS AVANZADOS Y CONFIGURACIÓN DE MATRIZ
   # ============================================================================
   st.markdown("---")
   st.subheader("⚙️ Panel de Filtros y Configuración de Matriz")
@@ -358,7 +358,7 @@ elif menu == "Panel de Administración":
   )
 
   with st.expander(
-      "🎛️ Botones y Filtros para la Tabla y Gráfica", expanded=True
+      "🎛️ Configuración de Filas, Columnas y Filtros Internos", expanded=True
   ):
     c_f1, c_f2, c_f3 = st.columns(3)
     with c_f1:
@@ -373,7 +373,7 @@ elif menu == "Panel de Administración":
       )
     with c_f2:
       col_columnas = st.selectbox(
-          "Columnas de la Tabla (Ej. Fecha / Semana):",
+          "Columnas de la Tabla (Ej. Fecha):",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Fecha")
@@ -383,7 +383,7 @@ elif menu == "Panel de Administración":
       )
     with c_f3:
       col_valor = st.selectbox(
-          "Valores a Medir / Tiempo Muerto (Ej. Tiempo de Falla):",
+          "Valores / Tiempo Muerto:",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Tiempo de Falla")
@@ -392,40 +392,74 @@ elif menu == "Panel de Administración":
           ),
       )
 
-    # Filtros unificados que afectan AMBOS
-    f1, f2, f3 = st.columns(3)
-    with f1:
+    st.markdown("### 🔍 Filtros Interactivos Internos")
+    f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+
+    # 1. Filtro Multiselección de Máquinas / Filas
+    with f_col1:
+      if not df_all.empty and col_filas in df_all.columns:
+        maquinas_disponibles = list(df_all[col_filas].dropna().unique())
+        maq_seleccionadas = st.multiselect(
+            f"Filtrar {col_filas}",
+            options=maquinas_disponibles,
+            default=maquinas_disponibles,
+        )
+      else:
+        maq_seleccionadas = []
+
+    # 2. Filtro Multiselección de Fechas / Columnas
+    with f_col2:
+      if not df_all.empty and col_columnas in df_all.columns:
+        fechas_disponibles = list(df_all[col_columnas].dropna().unique())
+        fechas_seleccionadas = st.multiselect(
+            f"Filtrar {col_columnas}",
+            options=fechas_disponibles,
+            default=fechas_disponibles,
+        )
+      else:
+        fechas_seleccionadas = []
+
+    # 3. Filtro por Turno
+    with f_col3:
       turno_opts = (
           ["Todos"] + list(df_all["Turno"].dropna().unique())
           if not df_all.empty and "Turno" in df_all.columns
           else ["Todos"]
       )
       f_turno = st.selectbox("Filtrar por Turno", turno_opts)
-    with f2:
+
+    # 4. Filtro por Quién Reporta
+    with f_col4:
       rep_opts = (
           ["Todos"] + list(df_all["Quien_Reporta"].dropna().unique())
           if not df_all.empty and "Quien_Reporta" in df_all.columns
           else ["Todos"]
       )
       f_rep = st.selectbox("Filtrar por Quién Reporta", rep_opts)
-    with f3:
-      texto_busqueda = st.text_input(
-          "Buscar en Descripciones / Diagnóstico",
-          "",
-          placeholder="Filtro de texto...",
-      )
 
-  # Aplicar los filtros
+    texto_busqueda = st.text_input(
+        "Buscar palabra clave (Diagnóstico / Solución):",
+        "",
+        placeholder="Escribe para buscar...",
+    )
+
+  # Aplicar todos los filtros al DataFrame
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
+    if maq_seleccionadas and col_filas in df_view.columns:
+      df_view = df_view[df_view[col_filas].isin(maq_seleccionadas)]
+    if fechas_seleccionadas and col_columnas in df_view.columns:
+      df_view = df_view[df_view[col_columnas].isin(fechas_seleccionadas)]
     if f_turno != "Todos" and "Turno" in df_view.columns:
       df_view = df_view[df_view["Turno"] == f_turno]
     if f_rep != "Todos" and "Quien_Reporta" in df_view.columns:
       df_view = df_view[df_view["Quien_Reporta"] == f_rep]
     if texto_busqueda:
-      mask = df_view.astype(str).apply(
-          lambda x: x.str.contains(texto_busqueda, case=False, na=False)
-      ).any(axis=1)
+      mask = (
+          df_view.astype(str)
+          .apply(lambda x: x.str.contains(texto_busqueda, case=False, na=False))
+          .any(axis=1)
+      )
       df_view = df_view[mask]
 
   # 1. VISUALIZACIÓN DE LA TABLA CRUZADA (MATRIZ)
@@ -433,7 +467,11 @@ elif menu == "Panel de Administración":
   st.subheader("📋 Total de Tiempo Muerto / Falla (Tabla Cruzada)")
 
   tabla_dinamica = pd.DataFrame()
-  if not df_view.empty and col_filas in df_view.columns and col_columnas in df_view.columns:
+  if (
+      not df_view.empty
+      and col_filas in df_view.columns
+      and col_columnas in df_view.columns
+  ):
     try:
       tabla_dinamica = pd.pivot_table(
           df_view,
@@ -445,8 +483,7 @@ elif menu == "Panel de Administración":
       )
       # Agregar totales estilo Excel
       tabla_dinamica["Total General"] = tabla_dinamica.sum(axis=1)
-      total_columna = pd.DataFrame(
-          tabla_dinamica.sum(axis=0)).T
+      total_columna = pd.DataFrame(tabla_dinamica.sum(axis=0)).T
       total_columna.index = ["Total General"]
       tabla_dinamica = pd.concat([tabla_dinamica, total_columna])
 
@@ -457,7 +494,7 @@ elif menu == "Panel de Administración":
   else:
     st.info("Sube un archivo o pega datos para mostrar la tabla cruzada.")
 
-  # 2. GRÁFICA DE BARRAS APILADAS
+  # 2. GRÁFICA DE BARRAS APILADAS CONTROLADA
   st.markdown("---")
   st.subheader("📈 Gráfica de Tiempo de Paros de Máquinas (Apilada)")
 
