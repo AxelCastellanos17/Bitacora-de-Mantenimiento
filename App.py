@@ -354,7 +354,7 @@ elif menu == "Panel de Administración":
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
   # ============================================================================
-  # PANEL DE FILTROS AVANZADOS Y CONFIGURACIÓN DE MATRIZ
+  # PANEL DE FILTROS Y CONFIGURACIÓN DE MATRIZ CON FILTRO JERÁRQUICO (AÑO/MES/DÍA)
   # ============================================================================
   st.markdown("---")
   st.subheader("⚙️ Panel de Filtros y Configuración de Matriz")
@@ -409,9 +409,35 @@ elif menu == "Panel de Administración":
       )
 
     st.markdown("### 🔍 Filtros Interactivos Internos")
+
+    # PREPARACIÓN DE DATOS TEMPORALES PARA EL FILTRO JERÁRQUICO (AÑO ➔ MES ➔ DÍA)
+    df_temp_filtro = df_all.copy()
+    if not df_temp_filtro.empty and col_columnas in df_temp_filtro.columns:
+      # Intentar convertir la columna de fechas a datetime para extraer año, mes y día de forma limpia
+      df_temp_filtro["_dt_temp"] = pd.to_datetime(
+          df_temp_filtro[col_columnas], errors="coerce"
+      )
+      if df_temp_filtro["_dt_temp"].notna().sum() > 0:
+        df_temp_filtro["_Anio"] = (
+            df_temp_filtro["_dt_temp"].dt.year.astype(str)
+        )
+        df_temp_filtro["_Mes"] = df_temp_filtro["_dt_temp"].dt.strftime("%B")
+        df_temp_filtro["_Dia"] = (
+            df_temp_filtro["_dt_temp"].dt.strftime("%Y-%m-%d")
+        )
+      else:
+        # Si son textos como '31-oct', los usamos directamente
+        df_temp_filtro["_Anio"] = "General"
+        df_temp_filtro["_Mes"] = "Meses Disponibles"
+        df_temp_filtro["_Dia"] = df_temp_filtro[col_columnas].astype(str)
+    else:
+      df_temp_filtro["_Anio"] = "General"
+      df_temp_filtro["_Mes"] = "General"
+      df_temp_filtro["_Dia"] = ""
+
     f_col1, f_col2, f_col3, f_col4 = st.columns(4)
 
-    # 1. Filtro Multiselección de Máquinas / Filas
+    # 1. Filtro Multiselección de Máquinas
     with f_col1:
       if not df_all.empty and col_filas in df_all.columns:
         maquinas_disponibles = sorted(
@@ -425,19 +451,33 @@ elif menu == "Panel de Administración":
       else:
         maq_seleccionadas = []
 
-    # 2. Filtro Multiselección de Fechas / Columnas
+    # 2. SELECCIÓN JERÁRQUICA: AÑO ➔ MES ➔ DÍA
     with f_col2:
-      if not df_all.empty and col_columnas in df_all.columns:
-        fechas_disponibles = sorted(
-            list(df_all[col_columnas].dropna().astype(str).unique())
+      if not df_temp_filtro.empty:
+        anios_disp = sorted(
+            list(df_temp_filtro["_Anio"].dropna().astype(str).unique())
         )
-        fechas_seleccionadas = st.multiselect(
-            f"Filtrar {col_columnas}",
-            options=fechas_disponibles,
-            default=fechas_disponibles,
+        anio_elegido = st.selectbox("📅 Seleccionar Año", anios_disp)
+
+        df_mes_filtrado = df_temp_filtro[
+            df_temp_filtro["_Anio"] == anio_elegido
+        ]
+        meses_disp = sorted(
+            list(df_mes_filtrado["_Mes"].dropna().astype(str).unique())
+        )
+        mes_elegido = st.selectbox("📂 Seleccionar Mes", meses_disp)
+
+        df_dia_filtrado = df_mes_filtrado[
+            df_mes_filtrado["_Mes"] == mes_elegido
+        ]
+        dias_disp = sorted(
+            list(df_dia_filtrado[col_columnas].dropna().astype(str).unique())
+        )
+        dias_seleccionados = st.multiselect(
+            "📌 Seleccionar Días", options=dias_disp, default=dias_disp
         )
       else:
-        fechas_seleccionadas = []
+        dias_seleccionados = []
 
     # 3. Filtro por Turno
     with f_col3:
@@ -465,16 +505,16 @@ elif menu == "Panel de Administración":
         placeholder="Escribe para buscar...",
     )
 
-  # Aplicar todos los filtros al DataFrame
+  # Aplicar todos los filtros al DataFrame final
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
     if maq_seleccionadas and col_filas in df_view.columns:
       df_view = df_view[
           df_view[col_filas].astype(str).isin(maq_seleccionadas)
       ]
-    if fechas_seleccionadas and col_columnas in df_view.columns:
+    if dias_seleccionados and col_columnas in df_view.columns:
       df_view = df_view[
-          df_view[col_columnas].astype(str).isin(fechas_seleccionadas)
+          df_view[col_columnas].astype(str).isin(dias_seleccionados)
       ]
     if f_turno != "Todos" and "Turno" in df_view.columns:
       df_view = df_view[df_view["Turno"].astype(str) == f_turno]
