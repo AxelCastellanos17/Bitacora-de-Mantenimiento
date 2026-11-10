@@ -241,7 +241,6 @@ elif menu == "Panel de Administración":
     archivo_subido = st.file_uploader(
         "📂 Abrir archivo (Excel, CSV o Texto)", type=["xlsx", "csv", "txt"]
     )
-    # Se usa una clave única para procesar el archivo una sola vez y evitar bucles
     if archivo_subido is not None:
       if "archivo_procesado" not in st.session_state or st.session_state[
           "archivo_procesado"
@@ -339,10 +338,10 @@ elif menu == "Panel de Administración":
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
   # ============================================================================
-  # TABLA DINÁMICA CRUZADA Y FILTROS (ESTILO EXCEL)
+  # PANEL UNIFICADO DE FILTROS Y TABLA DINÁMICA CRUZADA + GRÁFICA APARTE
   # ============================================================================
   st.markdown("---")
-  st.subheader("🔍 Tabla Dinámica y Gráfica por Tipo de Falla / Tiempos Muertos")
+  st.subheader("⚙️ Panel de Filtros y Configuración de Matriz")
 
   df_all = st.session_state["bitacora_general"]
   columnas_disponibles = (
@@ -359,13 +358,12 @@ elif menu == "Panel de Administración":
   )
 
   with st.expander(
-      "⚙️ Configuración de Filas y Columnas (Estilo Tabla Dinámica de Excel)",
-      expanded=True,
+      "🎛️ Botones y Filtros para la Tabla y Gráfica", expanded=True
   ):
     c_f1, c_f2, c_f3 = st.columns(3)
     with c_f1:
       col_filas = st.selectbox(
-          "Filas (Ej. Maquina):",
+          "Filas de la Tabla (Ej. Maquina):",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Maquina")
@@ -375,7 +373,7 @@ elif menu == "Panel de Administración":
       )
     with c_f2:
       col_columnas = st.selectbox(
-          "Columnas (Ej. Fecha / Semana):",
+          "Columnas de la Tabla (Ej. Fecha / Semana):",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Fecha")
@@ -385,7 +383,7 @@ elif menu == "Panel de Administración":
       )
     with c_f3:
       col_valor = st.selectbox(
-          "Valores / Conteo (Ej. Diagnostico o Turno):",
+          "Valores a Medir / Tiempo Muerto (Ej. Turno o Diagnostico):",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Diagnostico")
@@ -394,30 +392,30 @@ elif menu == "Panel de Administración":
           ),
       )
 
-  # Filtros laterales o superiores rápidos
-  f1, f2, f3 = st.columns(3)
-  with f1:
-    turno_opts = (
-        ["Todos"] + list(df_all["Turno"].dropna().unique())
-        if not df_all.empty and "Turno" in df_all.columns
-        else ["Todos"]
-    )
-    f_turno = st.selectbox("Filtrar por Turno", turno_opts)
-  with f2:
-    rep_opts = (
-        ["Todos"] + list(df_all["Quien_Reporta"].dropna().unique())
-        if not df_all.empty and "Quien_Reporta" in df_all.columns
-        else ["Todos"]
-    )
-    f_rep = st.selectbox("Filtrar por Quién Reporta", rep_opts)
-  with f3:
-    texto_busqueda = st.text_input(
-        "Buscar en Descripciones / Diagnóstico",
-        "",
-        placeholder="Filtro de texto...",
-    )
+    # Filtros avanzados que afectan AMBOS (tabla y gráfica)
+    f1, f2, f3 = st.columns(3)
+    with f1:
+      turno_opts = (
+          ["Todos"] + list(df_all["Turno"].dropna().unique())
+          if not df_all.empty and "Turno" in df_all.columns
+          else ["Todos"]
+      )
+      f_turno = st.selectbox("Filtrar por Turno", turno_opts)
+    with f2:
+      rep_opts = (
+          ["Todos"] + list(df_all["Quien_Reporta"].dropna().unique())
+          if not df_all.empty and "Quien_Reporta" in df_all.columns
+          else ["Todos"]
+      )
+      f_rep = st.selectbox("Filtrar por Quién Reporta", rep_opts)
+    with f3:
+      texto_busqueda = st.text_input(
+          "Buscar en Descripciones / Diagnóstico",
+          "",
+          placeholder="Filtro de texto...",
+      )
 
-  # Aplicar filtros
+  # Aplicar los filtros a los datos globales
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
     if f_turno != "Todos" and "Turno" in df_view.columns:
@@ -430,12 +428,12 @@ elif menu == "Panel de Administración":
       ).any(axis=1)
       df_view = df_view[mask]
 
+  # 1. VISUALIZACIÓN DE LA TABLA CRUZADA (MATRIZ)
   st.markdown("---")
-  st.subheader("📋 Tabla Cruzada Estilo Dinámica (Filas vs Columnas)")
+  st.subheader("📋 Total de Tiempo Muerto / Falla (Tabla Cruzada)")
 
   if not df_view.empty and col_filas in df_view.columns and col_columnas in df_view.columns:
     try:
-      # Creamos la tabla cruzada tipo Excel (Pivot Table)
       tabla_dinamica = pd.pivot_table(
           df_view,
           index=col_filas,
@@ -444,22 +442,31 @@ elif menu == "Panel de Administración":
           aggfunc="count",
           fill_value=0,
       )
+      # Agregar totales estilo Excel
+      tabla_dinamica["Total General"] = tabla_dinamica.sum(axis=1)
+      total_columna = pd.DataFrame(
+          tabla_dinamica.sum(axis=0)).T
+      total_columna.index = ["Total General"]
+      tabla_dinamica = pd.concat([tabla_dinamica, total_columna])
+
       st.dataframe(tabla_dinamica, use_container_width=True)
     except Exception as ex:
-      st.warning(
-          "No se pudo generar la tabla cruzada con las columnas seleccionadas."
-          f" Detalle: {ex}"
-      )
+      st.warning(f"No se pudo generar la tabla cruzada: {ex}")
       st.dataframe(df_view, use_container_width=True)
   else:
-    st.info("Sube datos o pégalos para visualizar la tabla dinámica cruzada.")
+    st.info("Sube un archivo o pega datos para mostrar la tabla cruzada.")
 
+  # 2. GRÁFICA APARTE CONTROLADA POR LOS MISMOS FILTROS
   st.markdown("---")
-  st.subheader(f"📈 Gráfica Interactiva basada en: {col_filas}")
+  st.subheader("📈 Gráfica de Tendencia (Independiente)")
+
   if not df_view.empty and col_filas in df_view.columns:
-    st.bar_chart(df_view[col_filas].value_counts())
+    # Genera la serie para la gráfica con los datos ya filtrados
+    serie_grafica = df_view[col_filas].value_counts()
+    st.line_chart(serie_grafica)
   else:
     df_cero = pd.DataFrame({"Datos": ["Sin datos"], "Cantidad": [0]}).set_index(
         "Datos"
     )
-    st.bar_chart(df_cero)
+    st.line_chart(df_cero)
+      
