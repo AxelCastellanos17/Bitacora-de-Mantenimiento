@@ -354,7 +354,7 @@ elif menu == "Panel de Administración":
       st.warning("Pega los datos en el cuadro de texto antes de procesar.")
 
   # ============================================================================
-  # PANEL DE FILTROS Y CONFIGURACIÓN DE MATRIZ CON FILTRO JERÁRQUICO (AÑO / MES[CHECK] / DÍA)
+  # PANEL DE FILTROS Y CONFIGURACIÓN DE MATRIZ
   # ============================================================================
   st.markdown("---")
   st.subheader("⚙️ Panel de Filtros y Configuración de Matriz")
@@ -417,9 +417,12 @@ elif menu == "Panel de Administración":
           df_temp_filtro[col_columnas], errors="coerce"
       )
       if df_temp_filtro["_dt_temp"].notna().sum() > 0:
-        # Extraer el año como entero limpio sin decimales
+        # Extracción correcta del año como texto de 4 dígitos
         df_temp_filtro["_Anio"] = (
-            df_temp_filtro["_dt_temp"].dt.year.fillna(0).astype(int).astype(str)
+            df_temp_filtro["_dt_temp"]
+            .dt.year.dropna()
+            .astype(int)
+            .astype(str)
         )
         df_temp_filtro["_Mes"] = df_temp_filtro["_dt_temp"].dt.strftime("%B")
       else:
@@ -431,7 +434,7 @@ elif menu == "Panel de Administración":
 
     f_col1, f_col2, f_col3, f_col4 = st.columns(4)
 
-    # 1. Filtro Multiselección de Máquinas
+    # 1. Filtro Multiselección de Máquinas (Inicia vacío)
     with f_col1:
       if not df_all.empty and col_filas in df_all.columns:
         maquinas_disponibles = sorted(
@@ -440,62 +443,91 @@ elif menu == "Panel de Administración":
         maq_seleccionadas = st.multiselect(
             f"Filtrar {col_filas}",
             options=maquinas_disponibles,
-            default=maquinas_disponibles,
+            default=[],
+            placeholder="Selecciona máquinas...",
         )
       else:
         maq_seleccionadas = []
 
-    # 2. SELECCIÓN JERÁRQUICA CORREGIDA: AÑO ➔ MESES (CON CHECK/MULTISELECT) ➔ DÍAS
+    # 2. SELECCIÓN JERÁRQUICA: AÑO ➔ MES(ES) ➔ DÍA(S)
     with f_col2:
       if not df_temp_filtro.empty:
         anios_disp = sorted(
             list(df_temp_filtro["_Anio"].dropna().astype(str).unique())
         )
-        anio_elegido = st.selectbox("📅 Seleccionar Año", anios_disp)
-
-        df_anio_filtrado = df_temp_filtro[
-            df_temp_filtro["_Anio"] == anio_elegido
-        ]
-        meses_disp = sorted(
-            list(df_anio_filtrado["_Mes"].dropna().astype(str).unique())
+        anio_elegido = st.selectbox(
+            "📅 Seleccionar Año",
+            options=["(Ninguno)"] + anios_disp,
+            index=0,
         )
 
-        # Meses con multiselección (casillas de verificación)
-        meses_seleccionados = st.multiselect(
-            "📂 Seleccionar Mes(es)", options=meses_disp, default=meses_disp
-        )
+        if anio_elegido != "(Ninguno)":
+          df_anio_filtrado = df_temp_filtro[
+              df_temp_filtro["_Anio"] == anio_elegido
+          ]
+          meses_disp = sorted(
+              list(df_anio_filtrado["_Mes"].dropna().astype(str).unique())
+          )
+          meses_seleccionados = st.multiselect(
+              "📂 Seleccionar Mes(es)",
+              options=meses_disp,
+              default=[],
+              placeholder="Selecciona meses...",
+          )
 
-        df_mes_filtrado = df_anio_filtrado[
-            df_anio_filtrado["_Mes"].isin(meses_seleccionados)
-        ]
-        dias_disp = sorted(
-            list(df_mes_filtrado[col_columnas].dropna().astype(str).unique())
-        )
-        dias_seleccionados = st.multiselect(
-            "📌 Seleccionar Días", options=dias_disp, default=dias_disp
-        )
+          if meses_seleccionados:
+            df_mes_filtrado = df_anio_filtrado[
+                df_anio_filtrado["_Mes"].isin(meses_seleccionados)
+            ]
+            dias_disp = sorted(
+                list(
+                    df_mes_filtrado[col_columnas].dropna().astype(str).unique()
+                )
+            )
+            dias_seleccionados = st.multiselect(
+                "📌 Seleccionar Días",
+                options=dias_disp,
+                default=[],
+                placeholder="Selecciona días...",
+            )
+          else:
+            dias_seleccionados = []
+        else:
+          meses_seleccionados = []
+          dias_seleccionados = []
       else:
         dias_seleccionados = []
 
-    # 3. Filtro por Turno
+    # 3. Filtro por Turno (Inicia vacío)
     with f_col3:
       turno_opts = (
-          ["Todos"]
-          + sorted(list(df_all["Turno"].dropna().astype(str).unique()))
+          sorted(list(df_all["Turno"].dropna().astype(str).unique()))
           if not df_all.empty and "Turno" in df_all.columns
-          else ["Todos"]
+          else []
       )
-      f_turno = st.selectbox("Filtrar por Turno", turno_opts)
+      f_turno = st.selectbox(
+          "Filtrar por Turno",
+          options=["(Todos / Ninguno)"] + turno_opts,
+          index=0,
+      )
 
-    # 4. Filtro por Quién Reporta
+    # 4. Filtro Multiselección de "Quién Reporta" (Con opción de Todos y checks)
     with f_col4:
-      rep_opts = (
-          ["Todos"]
-          + sorted(list(df_all["Quien_Reporta"].dropna().astype(str).unique()))
-          if not df_all.empty and "Quien_Reporta" in df_all.columns
-          else ["Todos"]
-      )
-      f_rep = st.selectbox("Filtrar por Quién Reporta", rep_opts)
+      if not df_all.empty and "Quien_Reporta" in df_all.columns:
+        reporta_opts = sorted(
+            list(df_all["Quien_Reporta"].dropna().astype(str).unique())
+        )
+        # Checkbox auxiliar para marcar/desmarcar todos rápidamente
+        elegir_todos_rep = st.checkbox("Seleccionar Todos (Quién Reporta)")
+        default_rep = reporta_opts if elegir_todos_rep else []
+        rep_seleccionados = st.multiselect(
+            "Filtrar por Quién Reporta",
+            options=reporta_opts,
+            default=default_rep,
+            placeholder="Selecciona personas...",
+        )
+      else:
+        rep_seleccionados = []
 
     texto_busqueda = st.text_input(
         "Buscar palabra clave (Diagnóstico / Solución):",
@@ -506,18 +538,36 @@ elif menu == "Panel de Administración":
   # Aplicar todos los filtros al DataFrame final
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
+    # Filtro de Máquinas
     if maq_seleccionadas and col_filas in df_view.columns:
       df_view = df_view[
           df_view[col_filas].astype(str).isin(maq_seleccionadas)
       ]
-    if dias_seleccionados and col_columnas in df_view.columns:
+    else:
+      df_view = df_view.iloc[0:0]
+
+    # Filtro de Fechas
+    if "dias_seleccionados" in locals() and dias_seleccionados and col_columnas in df_view.columns:
       df_view = df_view[
           df_view[col_columnas].astype(str).isin(dias_seleccionados)
       ]
-    if f_turno != "Todos" and "Turno" in df_view.columns:
+    elif "_Anio" in locals() and anio_elegido != "(Ninguno)":
+      pass
+    else:
+      df_view = df_view.iloc[0:0]
+
+    # Filtro de Turno
+    if f_turno != "(Todos / Ninguno)" and "Turno" in df_view.columns:
       df_view = df_view[df_view["Turno"].astype(str) == f_turno]
-    if f_rep != "Todos" and "Quien_Reporta" in df_view.columns:
-      df_view = df_view[df_view["Quien_Reporta"].astype(str) == f_rep]
+
+    # Filtro de Quién Reporta (multiselección)
+    if rep_seleccionados and "Quien_Reporta" in df_view.columns:
+      df_view = df_view[
+          df_view["Quien_Reporta"].astype(str).isin(rep_seleccionados)
+      ]
+    else:
+      df_view = df_view.iloc[0:0]
+
     if texto_busqueda:
       mask = (
           df_view.astype(str)
@@ -556,7 +606,10 @@ elif menu == "Panel de Administración":
       st.warning(f"No se pudo generar la tabla cruzada: {ex}")
       st.dataframe(df_view, use_container_width=True)
   else:
-    st.info("Sube un archivo o pega datos para mostrar la tabla cruzada.")
+    st.info(
+        "Selecciona los filtros arriba (Máquinas, Fechas y Quién Reporta) para"
+        " visualizar los datos."
+    )
 
   # 2. GRÁFICA DE BARRAS APILADAS CONTROLADA
   st.markdown("---")
@@ -577,3 +630,4 @@ elif menu == "Panel de Administración":
         "Datos"
     )
     st.bar_chart(df_cero)
+      
