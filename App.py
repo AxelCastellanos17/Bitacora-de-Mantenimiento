@@ -380,7 +380,7 @@ elif menu == "Panel de Administración":
         st.rerun()
 
   # ============================================================================
-  # PANEL DE FILTROS Y CONFIGURACIÓN DE MATRIZ
+  # PANEL DE FILTROS 
   # ============================================================================
   st.markdown("---")
   st.subheader("⚙️ Panel de Filtros y Configuración de Matriz")
