@@ -593,7 +593,7 @@ elif menu == "Panel de Administración":
       and col_valor in df_view.columns
   ):
     try:
-      # 1. Creamos la base numérica sumando los segundos puros
+      # 1. Base numérica exacta
       tabla_numerica = pd.pivot_table(
           df_view,
           index=col_filas,
@@ -607,7 +607,7 @@ elif menu == "Panel de Administración":
       total_columna_num.index = ["Total General"]
       tabla_numerica = pd.concat([tabla_numerica, total_columna_num])
 
-      # 2. Si el usuario seleccionó _Segundos_Totales, transformamos la tabla visualmente a [H]:mm:ss
+      # 2. Mostramos la tabla visualmente formateada a [H]:mm:ss
       if col_valor == "_Segundos_Totales":
 
         def convertir_a_hms_formato_excel(segundos):
@@ -635,6 +635,7 @@ elif menu == "Panel de Administración":
   st.subheader("📈 Gráfica de Tiempo Muerto Total de Máquinas (Minutos)")
 
   if not tabla_numerica.empty:
+    # Usamos tabla_numerica para la gráfica y evitamos la tabla formateada de texto
     df_grafica_barras = tabla_numerica.drop(
         index=["Total General"], errors="ignore"
     )
@@ -643,7 +644,7 @@ elif menu == "Panel de Administración":
           columns=["Total General"], errors="ignore"
       )
 
-    # Convertimos los segundos exactos a minutos decimales para que la gráfica pinte las barras correctamente
+    # Si se seleccionó segundos totales, convertimos los valores a minutos numéricos para las barras
     if col_valor == "_Segundos_Totales":
       df_grafica_barras = df_grafica_barras / 60
 
