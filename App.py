@@ -2,7 +2,6 @@ from datetime import datetime
 import io
 import os
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
 st.set_page_config(
@@ -638,73 +637,30 @@ elif menu == "Panel de Administración":
     )
 
   st.markdown("---")
-  st.subheader(
-      "📈 Gráfica de Tiempo Muerto (Con texto de hora exacta dentro de la"
-      " barra)"
-  )
+  st.subheader("📈 Gráfica de Tiempo Muerto (Horas Decimales)")
 
   if not tabla_numerica.empty:
-    # 3. Preparamos los datos para la gráfica profesional con Plotly
+    # 3. Preparamos los datos limpios para la gráfica nativa de Streamlit
     df_grafica = tabla_numerica.drop(index=["Total General"], errors="ignore")
     if "Total General" in df_grafica.columns:
       df_grafica = df_grafica.drop(columns=["Total General"], errors="ignore")
 
-    # Asegurar horas decimales puras para las barras
     if col_valor != "Horas_Decimales":
       df_grafica = df_grafica / 3600
 
     df_grafica = df_grafica.apply(pd.to_numeric, errors="coerce").fillna(0)
 
-    # Convertimos el formato de tabla ancha a formato largo para Plotly Express
-    df_melted = df_grafica.reset_index().melt(
-        id_vars=col_filas, var_name="Fecha_Col", value_name="Horas_Val"
-    )
+    # Renderizamos la gráfica limpia de barras con Streamlit
+    st.bar_chart(df_grafica)
 
-    if not df_melted.empty and df_melted["Horas_Val"].sum() > 0:
-      # Creamos la etiqueta de texto en formato hora legible para incrustarla dentro de la barra
-      def val_a_texto(v):
-        if pd.isna(v) or v <= 0:
-          return ""
-        segundos = v * 3600
-        h = int(segundos // 3600)
-        m = int((segundos % 3600) // 60)
-        return f"{h}h {m}m"
-
-      df_melted["Texto_Barra"] = df_melted["Horas_Val"].apply(val_a_texto)
-
-      # Generamos la gráfica de barras apiladas con Plotly
-      fig = px.bar(
-          df_melted,
-          x=col_filas,
-          y="Horas_Val",
-          color="Fecha_Col",
-          text="Texto_Barra",
-          title="Tiempo Muerto por Máquina y Fecha",
+    # Tabla auxiliar elegante debajo de la gráfica con el desglose exacto en texto para cada máquina y fecha
+    with st.expander("🔍 Ver el tiempo exacto en formato de texto por barra"):
+      tabla_texto_barras = tabla_numerica.map(
+          lambda v: (
+              f"{int(v if col_valor=='Horas_Decimales' else v/3600)}h "
+              f"{int(((v if col_valor=='Horas_Decimales' else v/3600)%1)*60)}m"
+          )
       )
-
-      # Estilo para poner el texto transparente dentro de la barra con letra negra
-      fig.update_traces(
-          textfont_color="black",
-          textangle=0,
-          textposition="inside",
-          insidetextanchor="middle",
-          marker_color="rgba(31, 119, 180, 0.85)",
-      )
-
-      fig.update_layout(
-          barmode="stack",
-          xaxis_title=col_filas,
-          yaxis_title="Horas Decimales",
-          legend_title="Fecha",
-          plot_bgcolor="rgba(0,0,0,0)",
-          paper_bgcolor="rgba(0,0,0,0)",
-      )
-
-      st.plotly_chart(fig, use_container_width=True)
-    else:
-      st.info(
-          "No hay datos numéricos suficientes para graficar en el rango"
-          " seleccionado."
-      )
+      st.dataframe(tabla_texto_barras, use_container_width=True)
   else:
     st.info("Sin datos para mostrar en la gráfica.")
