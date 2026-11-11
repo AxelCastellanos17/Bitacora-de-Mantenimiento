@@ -416,21 +416,18 @@ elif menu == "Panel de Administración":
       df_temp_filtro["_dt_temp"] = pd.to_datetime(
           df_temp_filtro[col_columnas], errors="coerce"
       )
-      if df_temp_filtro["_dt_temp"].notna().sum() > 0:
-        # Extracción correcta del año como texto de 4 dígitos
-        df_temp_filtro["_Anio"] = (
-            df_temp_filtro["_dt_temp"]
-            .dt.year.dropna()
-            .astype(int)
-            .astype(str)
-        )
-        df_temp_filtro["_Mes"] = df_temp_filtro["_dt_temp"].dt.strftime("%B")
-      else:
-        df_temp_filtro["_Anio"] = "General"
-        df_temp_filtro["_Mes"] = "General"
+      # Manejo inteligente de años: si es válido muestra el año, si está vacío se marca como 'Sin fecha'
+      df_temp_filtro["_Anio"] = df_temp_filtro["_dt_temp"].dt.year.apply(
+          lambda x: str(int(x)) if pd.notna(x) and x >= 2000 else "(Sin fecha)"
+      )
+      df_temp_filtro["_Mes"] = (
+          df_temp_filtro["_dt_temp"]
+          .dt.strftime("%B")
+          .fillna("Mes no especificado")
+      )
     else:
-      df_temp_filtro["_Anio"] = "General"
-      df_temp_filtro["_Mes"] = "General"
+      df_temp_filtro["_Anio"] = "(Sin fecha)"
+      df_temp_filtro["_Mes"] = "Mes no especificado"
 
     f_col1, f_col2, f_col3, f_col4 = st.columns(4)
 
@@ -517,7 +514,6 @@ elif menu == "Panel de Administración":
         reporta_opts = sorted(
             list(df_all["Quien_Reporta"].dropna().astype(str).unique())
         )
-        # Checkbox auxiliar para marcar/desmarcar todos rápidamente
         elegir_todos_rep = st.checkbox("Seleccionar Todos (Quién Reporta)")
         default_rep = reporta_opts if elegir_todos_rep else []
         rep_seleccionados = st.multiselect(
@@ -630,4 +626,7 @@ elif menu == "Panel de Administración":
         "Datos"
     )
     st.bar_chart(df_cero)
+
+
+
       
