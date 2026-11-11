@@ -380,10 +380,9 @@ elif menu == "Panel de Administración":
         st.rerun()
 
   # ============================================================================
-  # PANEL DE FILTROS 
+  # PANEL DE FILTROS Y CONFIGURACIÓN (REDISEÑO COMPACTO Y PRÁCTICO)
   # ============================================================================
   st.markdown("---")
-  st.subheader("⚙️ Panel de Filtros y Configuración")
 
   df_all = st.session_state["bitacora_general"]
   columnas_disponibles = (
@@ -399,13 +398,15 @@ elif menu == "Panel de Administración":
       ]
   )
 
+  # Usamos un expander minimalista y limpio
   with st.expander(
-      "🎛️ Configuración de Filas, Columnas y Filtros Internos", expanded=True
+      "🎛️ Panel de Filtros y Configuración (Compacto)", expanded=True
   ):
-    c_f1, c_f2, c_f3 = st.columns(3)
-    with c_f1:
+    # Fila 1: Configuración de la Matriz en 3 columnas pequeñas
+    cf1, cf2, cf3 = st.columns(3)
+    with cf1:
       col_filas = st.selectbox(
-          "Filas de la Tabla (Ej. Maquina):",
+          "Filas:",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Maquina")
@@ -413,9 +414,9 @@ elif menu == "Panel de Administración":
               else 0
           ),
       )
-    with c_f2:
+    with cf2:
       col_columnas = st.selectbox(
-          "Columnas de la Tabla (Ej. Fecha):",
+          "Columnas:",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Fecha")
@@ -423,7 +424,7 @@ elif menu == "Panel de Administración":
               else 0
           ),
       )
-    with c_f3:
+    with cf3:
       opciones_valores = [
           "Horas_Decimales",
           "_Segundos_Totales",
@@ -433,12 +434,11 @@ elif menu == "Panel de Administración":
           for c in columnas_disponibles
           if c not in ["Horas_Decimales", "_Segundos_Totales", "Minutos_Muertos"]
       ]
-      col_valor = st.selectbox(
-          "Valores / Unidad de Cálculo:", opciones_valores, index=0
-      )
+      col_valor = st.selectbox("Valores:", opciones_valores, index=0)
 
-    st.markdown("### 🔍 Filtros Interactivos Internos")
+    st.markdown("---")
 
+    # Preparar datos temporales para filtros de fecha
     df_temp_filtro = df_all.copy()
     if not df_temp_filtro.empty and col_columnas in df_temp_filtro.columns:
       df_temp_filtro["_dt_temp"] = pd.to_datetime(
@@ -456,31 +456,39 @@ elif menu == "Panel de Administración":
       df_temp_filtro["_Anio"] = "(Sin fecha)"
       df_temp_filtro["_Mes"] = "Mes no especificado"
 
-    f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+    # Fila 2: Filtros Interactivos organizados de forma práctica
+    ff1, ff2, ff3 = st.columns(3)
 
-    with f_col1:
+    with ff1:
       if not df_all.empty and col_filas in df_all.columns:
         maquinas_disponibles = sorted(
             list(df_all[col_filas].dropna().astype(str).unique())
         )
         maq_seleccionadas = st.multiselect(
-            f"Filtrar {col_filas}",
+            f"Filtro {col_filas}:",
             options=maquinas_disponibles,
             default=[],
-            placeholder="Selecciona máquinas...",
+            placeholder="Selecciona...",
         )
       else:
         maq_seleccionadas = []
 
-    with f_col2:
+      turno_opts = (
+          sorted(list(df_all["Turno"].dropna().astype(str).unique()))
+          if not df_all.empty and "Turno" in df_all.columns
+          else []
+      )
+      f_turno = st.selectbox(
+          "Turno:", options=["(Todos)"] + turno_opts, index=0
+      )
+
+    with ff2:
       if not df_temp_filtro.empty:
         anios_disp = sorted(
             list(df_temp_filtro["_Anio"].dropna().astype(str).unique())
         )
         anio_elegido = st.selectbox(
-            "📅 Seleccionar Año",
-            options=["(Ninguno)"] + anios_disp,
-            index=0,
+            "Año:", options=["(Ninguno)"] + anios_disp, index=0
         )
 
         if anio_elegido != "(Ninguno)":
@@ -491,10 +499,7 @@ elif menu == "Panel de Administración":
               list(df_anio_filtrado["_Mes"].dropna().astype(str).unique())
           )
           meses_seleccionados = st.multiselect(
-              "📂 Seleccionar Mes(es)",
-              options=meses_disp,
-              default=[],
-              placeholder="Selecciona meses...",
+              "Mes(es):", options=meses_disp, default=[], placeholder="Meses..."
           )
 
           if meses_seleccionados:
@@ -507,10 +512,7 @@ elif menu == "Panel de Administración":
                 )
             )
             dias_seleccionados = st.multiselect(
-                "📌 Seleccionar Días",
-                options=dias_disp,
-                default=[],
-                placeholder="Selecciona días...",
+                "Días:", options=dias_disp, default=[], placeholder="Días..."
             )
           else:
             dias_seleccionados = []
@@ -520,39 +522,23 @@ elif menu == "Panel de Administración":
       else:
         dias_seleccionados = []
 
-    with f_col3:
-      turno_opts = (
-          sorted(list(df_all["Turno"].dropna().astype(str).unique()))
-          if not df_all.empty and "Turno" in df_all.columns
-          else []
-      )
-      f_turno = st.selectbox(
-          "Filtrar por Turno",
-          options=["(Todos / Ninguno)"] + turno_opts,
-          index=0,
-      )
-
-    with f_col4:
+    with ff3:
       if not df_all.empty and "Quien_Reporta" in df_all.columns:
         reporta_opts = sorted(
             list(df_all["Quien_Reporta"].dropna().astype(str).unique())
         )
-        elegir_todos_rep = st.checkbox("Seleccionar Todos (Quién Reporta)")
-        default_rep = reporta_opts if elegir_todos_rep else []
         rep_seleccionados = st.multiselect(
-            "Filtrar por Quién Reporta",
+            "Quién Reporta:",
             options=reporta_opts,
-            default=default_rep,
-            placeholder="Selecciona personas...",
+            default=[],
+            placeholder="Técnicos...",
         )
       else:
         rep_seleccionados = []
 
-    texto_busqueda = st.text_input(
-        "Buscar palabra clave (Diagnóstico / Solución):",
-        "",
-        placeholder="Escribe para buscar...",
-    )
+      texto_busqueda = st.text_input(
+          "Buscar palabra clave:", "", placeholder="Diagnóstico / Solución..."
+      )
 
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
@@ -572,7 +558,7 @@ elif menu == "Panel de Administración":
     else:
       df_view = df_view.iloc[0:0]
 
-    if f_turno != "(Todos / Ninguno)" and "Turno" in df_view.columns:
+    if f_turno != "(Todos)" and "Turno" in df_view.columns:
       df_view = df_view[df_view["Turno"].astype(str) == f_turno]
 
     if rep_seleccionados and "Quien_Reporta" in df_view.columns:
@@ -580,7 +566,7 @@ elif menu == "Panel de Administración":
           df_view["Quien_Reporta"].astype(str).isin(rep_seleccionados)
       ]
     else:
-      df_view = df_view.iloc[0:0]
+      pass  # Si no selecciona técnicos, muestra todos los filtrados
 
     if texto_busqueda:
       mask = (
@@ -591,7 +577,7 @@ elif menu == "Panel de Administración":
       df_view = df_view[mask]
 
   st.markdown("---")
-  st.subheader("📋 Tiempo Reportado")
+  st.subheader("📋 Matriz de Tiempo Muerto (Formato Estilo [H]:mm:ss)")
 
   tabla_numerica = pd.DataFrame()
   if (
@@ -638,10 +624,10 @@ elif menu == "Panel de Administración":
     )
 
   st.markdown("---")
-  st.subheader("📈 Gráfica Apilada de Tiempo Reportado")
+  st.subheader("📈 Gráfica Apilada de Tiempo Muerto (Estilo Excel)")
 
   if not tabla_numerica.empty:
-    # 3. Preparamos la gráfica de barras apiladas directamente desde la matriz sin errores
+    # 3. Preparamos la gráfica de barras apiladas directamente desde la matriz
     df_grafica = tabla_numerica.drop(index=["Total General"], errors="ignore")
     if "Total General" in df_grafica.columns:
       df_grafica = df_grafica.drop(columns=["Total General"], errors="ignore")
@@ -654,11 +640,9 @@ elif menu == "Panel de Administración":
     if not df_grafica.empty and df_grafica.sum().sum() > 0:
       fig = go.Figure()
 
-      # Recorremos cada fecha (columna) para armar las barras apiladas de forma robusta
       for fecha_col in df_grafica.columns:
         valores_y = df_grafica[fecha_col]
 
-        # Convertimos cada valor numérico decimal a texto exacto de hora (ej. 01:30:00)
         textos_barra = []
         for val in valores_y:
           if val <= 0:
