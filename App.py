@@ -26,7 +26,7 @@ menu = st.sidebar.selectbox(
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
 
 
-# FUNCIÓN PARA CALCULAR SEGUNDOS Y MINUTOS
+# FUNCIÓN PARA CONVERTIR HORAS A TIEMPO REAL Y MINUTOS/HORAS EXACTOS
 def calcular_tiempo_falla(df):
   try:
     if "Hora_Inicial" in df.columns and "Hora_Final" in df.columns:
@@ -45,13 +45,17 @@ def calcular_tiempo_falla(df):
       )
 
       df["_Segundos_Totales"] = diferencia.dt.total_seconds().fillna(0)
-      df["Minutos_Muertos"] = df["_Segundos_Totales"] / 60
+      # Minutos precisos con decimales para que la gráfica no pierda segundos
+      df["_Minutos_Precicios"] = df["_Segundos_Totales"] / 60
+      df["_Horas_Precisas"] = df["_Segundos_Totales"] / 3600
     else:
       df["_Segundos_Totales"] = 0
-      df["Minutos_Muertos"] = 0
+      df["_Minutos_Precicios"] = 0
+      df["_Horas_Precisas"] = 0
   except Exception:
     df["_Segundos_Totales"] = 0
-    df["Minutos_Muertos"] = 0
+    df["_Minutos_Precicios"] = 0
+    df["_Horas_Precisas"] = 0
   return df
 
 
@@ -420,13 +424,15 @@ elif menu == "Panel de Administración":
           ),
       )
     with c_f3:
-      opciones_valores = ["_Segundos_Totales", "Minutos_Muertos"] + [
-          c
-          for c in columnas_disponibles
-          if c not in ["_Segundos_Totales", "Minutos_Muertos"]
-      ]
+      opciones_valores = [
+          "_Minutos_Precicios",
+          "_Horas_Precisas",
+          "_Segundos_Totales",
+      ] + columnas_disponibles
       col_valor = st.selectbox(
-          "Valores / Unidad de Cálculo:", opciones_valores, index=0
+          "Valores / Tiempo Muerto (Precisión Decimal):",
+          opciones_valores,
+          index=0,
       )
 
     st.markdown("### 🔍 Filtros Interactivos Internos")
@@ -583,17 +589,18 @@ elif menu == "Panel de Administración":
       df_view = df_view[mask]
 
   st.markdown("---")
-  st.subheader("📋 Matriz de Tiempo Muerto (Formato Estilo [H]:mm:ss)")
+  st.subheader(
+      "📋 Total de Tiempo Muerto (Minutos Precisos con Decimales)"
+  )
 
   tabla_numerica = pd.DataFrame()
   if (
       not df_view.empty
       and col_filas in df_view.columns
       and col_columnas in df_view.columns
-      and col_valor in df_view.columns
   ):
     try:
-      # 1. Base numérica exacta
+      # Tabla numérica exacta para la matriz y la gráfica
       tabla_numerica = pd.pivot_table(
           df_view,
           index=col_filas,
@@ -607,21 +614,8 @@ elif menu == "Panel de Administración":
       total_columna_num.index = ["Total General"]
       tabla_numerica = pd.concat([tabla_numerica, total_columna_num])
 
-      # 2. Mostramos la tabla visualmente formateada a [H]:mm:ss
-      if col_valor == "_Segundos_Totales":
-
-        def convertir_a_hms_formato_excel(segundos):
-          if pd.isna(segundos) or segundos <= 0:
-            return "00:00:00"
-          horas = int(segundos // 3600)
-          minutos = int((segundos % 3600) // 60)
-          segs = int(segundos % 60)
-          return f"{horas:02d}:{minutos:02d}:{segs:02d}"
-
-        tabla_formateada = tabla_numerica.map(convertir_a_hms_formato_excel)
-        st.dataframe(tabla_formateada, use_container_width=True)
-      else:
-        st.dataframe(tabla_numerica.round(2), use_container_width=True)
+      # Mostrar tabla con redondeo a 2 decimales para máxima legibilidad y precisión
+      st.dataframe(tabla_numerica.round(2), use_container_width=True)
     except Exception as ex:
       st.warning(f"No se pudo generar la tabla cruzada: {ex}")
       st.dataframe(df_view, use_container_width=True)
@@ -632,10 +626,9 @@ elif menu == "Panel de Administración":
     )
 
   st.markdown("---")
-  st.subheader("📈 Gráfica de Tiempo Muerto Total de Máquinas (Minutos)")
+  st.subheader("📈 Gráfica de Tiempo Muerto Total de Máquinas (Apilada)")
 
   if not tabla_numerica.empty:
-    # Usamos tabla_numerica para la gráfica y evitamos la tabla formateada de texto
     df_grafica_barras = tabla_numerica.drop(
         index=["Total General"], errors="ignore"
     )
@@ -644,13 +637,10 @@ elif menu == "Panel de Administración":
           columns=["Total General"], errors="ignore"
       )
 
-    # Si se seleccionó segundos totales, convertimos los valores a minutos numéricos para las barras
-    if col_valor == "_Segundos_Totales":
-      df_grafica_barras = df_grafica_barras / 60
-
     st.bar_chart(df_grafica_barras)
   else:
     df_cero = pd.DataFrame({"Datos": ["Sin datos"], "Cantidad": [0]}).set_index(
         "Datos"
     )
     st.bar_chart(df_cero)
+      
