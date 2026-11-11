@@ -334,7 +334,7 @@ elif menu == "Panel de Administración":
   df_all = st.session_state["bitacora_general"]
   total_reg = len(df_all)
 
-  # Barra superior de sincronización y respaldos ultra compacta
+  # Barra superior compacta
   b1, b2, b3 = st.columns([2, 1, 1])
   with b1:
     st.caption(f"🟢 **Google Sheets:** {total_reg} registros sincronizados")
@@ -360,7 +360,7 @@ elif menu == "Panel de Administración":
       )
 
   # ============================================================================
-  # PANEL DE FILTROS Y CONFIGURACIÓN (SUPER COMPACTO)
+  # PANEL DE FILTROS Y CONFIGURACIÓN (COMPACTO Y BLINDADO)
   # ============================================================================
   columnas_disponibles = (
       list(df_all.columns)
@@ -376,7 +376,6 @@ elif menu == "Panel de Administración":
   )
 
   with st.expander("🎛️ Filtros y Configuración de Matriz", expanded=True):
-    # Fila única para la estructura de la matriz
     sc1, sc2, sc3 = st.columns(3)
     with sc1:
       col_filas = st.selectbox(
@@ -414,7 +413,7 @@ elif menu == "Panel de Administración":
           "Valores", opciones_valores, index=0, label_visibility="collapsed"
       )
 
-    # Preparar datos temporales para filtros de fecha
+    # Preparar datos temporales seguros con columnas auxiliares garantizadas
     df_temp_filtro = df_all.copy()
     if not df_temp_filtro.empty and col_columnas in df_temp_filtro.columns:
       df_temp_filtro["_dt_temp"] = pd.to_datetime(
@@ -432,7 +431,6 @@ elif menu == "Panel de Administración":
       df_temp_filtro["_Anio"] = "(Sin fecha)"
       df_temp_filtro["_Mes"] = "Mes no especificado"
 
-    # Filtros interactivos distribuidos de forma limpia en 4 columnas
     fc1, fc2, fc3, fc4 = st.columns(4)
 
     with fc1:
@@ -458,6 +456,8 @@ elif menu == "Panel de Administración":
           "Año", options=["(Todos los años)"] + anios_disp, index=0
       )
 
+      meses_seleccionados = []
+      dias_seleccionados = []
       if anio_elegido != "(Todos los años)":
         df_anio_filtrado = df_temp_filtro[
             df_temp_filtro["_Anio"] == anio_elegido
@@ -468,7 +468,6 @@ elif menu == "Panel de Administración":
         meses_seleccionados = st.multiselect(
             "Mes(es)", options=meses_disp, default=[], placeholder="Todos"
         )
-        dias_seleccionados = []
         if meses_seleccionados:
           df_mes_filtrado = df_anio_filtrado[
               df_anio_filtrado["_Mes"].isin(meses_seleccionados)
@@ -479,9 +478,6 @@ elif menu == "Panel de Administración":
           dias_seleccionados = st.multiselect(
               "Días", options=dias_disp, default=[], placeholder="Todos"
           )
-      else:
-        meses_seleccionados = []
-        dias_seleccionados = []
 
     with fc3:
       turno_opts = (
@@ -510,21 +506,21 @@ elif menu == "Panel de Administración":
           "Búsqueda rápida", "", placeholder="Diagnóstico / Solución..."
       )
 
-  # Aplicar filtros al DataFrame
-  df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
+  # Aplicar filtros al DataFrame de forma completamente segura (evitando KeyError)
+  df_view = df_temp_filtro.copy() if not df_temp_filtro.empty else pd.DataFrame()
   if not df_view.empty:
     if maq_seleccionadas and col_filas in df_view.columns:
       df_view = df_view[
           df_view[col_filas].astype(str).isin(maq_seleccionadas)
       ]
 
-    if "dias_seleccionados" in locals() and dias_seleccionados and col_columnas in df_view.columns:
+    if dias_seleccionados and col_columnas in df_view.columns:
       df_view = df_view[
           df_view[col_columnas].astype(str).isin(dias_seleccionados)
       ]
     elif anio_elegido != "(Todos los años)":
       df_view = df_view[df_view["_Anio"] == anio_elegido]
-      if "meses_seleccionados" in locals() and meses_seleccionados:
+      if meses_seleccionados:
         df_view = df_view[df_view["_Mes"].isin(meses_seleccionados)]
 
     if f_turno != "(Todos)" and "Turno" in df_view.columns:
