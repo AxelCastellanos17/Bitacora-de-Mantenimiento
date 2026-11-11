@@ -331,60 +331,37 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control")
 
-  st.markdown("### 🟢 Estado de Sincronización")
-  col_est1, col_est2 = st.columns([3, 1])
+  df_all = st.session_state["bitacora_general"]
+  total_reg = len(df_all)
 
-  with col_est1:
-    total_reg = len(st.session_state.get("bitacora_general", pd.DataFrame()))
-    st.success(
-        f"✅ **Fuente Conectada:** Google Sheets | **Registros cargados:**"
-        f" {total_reg}"
-    )
-
-  with col_est2:
-    if st.button(
-        "🔄 Actualizar Datos", type="primary", use_container_width=True
-    ):
+  # Barra superior de sincronización y respaldos ultra compacta
+  b1, b2, b3 = st.columns([2, 1, 1])
+  with b1:
+    st.caption(f"🟢 **Google Sheets:** {total_reg} registros sincronizados")
+  with b2:
+    if st.button("🔄 Sincronizar", use_container_width=True):
       if GOOGLE_SHEET_CSV_URL.strip() != "":
         st.session_state["bitacora_general"] = cargar_y_limpiar_datos(
             GOOGLE_SHEET_CSV_URL
         )
-        st.success("¡Datos recargados con éxito!")
+        st.success("¡Actualizado!")
         st.rerun()
-      else:
-        st.error("No hay URL configurada.")
-
-  st.markdown("---")
-
-  col_d, col_a = st.columns(2)
-  with col_d:
-    df_all = st.session_state["bitacora_general"]
+  with b3:
     if not df_all.empty:
       output = io.BytesIO()
       with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df_all.to_excel(writer, index=False, sheet_name="Reportes")
       st.download_button(
-          "📥 Descargar Respaldo Excel",
+          "📥 Descargar Excel",
           data=output.getvalue(),
           file_name="Bitacora_Mantenimiento.xlsx",
           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          use_container_width=True,
       )
 
-  with col_a:
-    if st.button("🔄 Sincronizar desde Google Sheet"):
-      if GOOGLE_SHEET_CSV_URL.strip() != "":
-        st.session_state["bitacora_general"] = cargar_y_limpiar_datos(
-            GOOGLE_SHEET_CSV_URL
-        )
-        st.success("¡Datos sincronizados correctamente desde Google Sheets!")
-        st.rerun()
-
   # ============================================================================
-  # PANEL DE FILTROS Y CONFIGURACIÓN (REDISEÑO COMPACTO Y PRÁCTICO)
+  # PANEL DE FILTROS Y CONFIGURACIÓN (SUPER COMPACTO)
   # ============================================================================
-  st.markdown("---")
-
-  df_all = st.session_state["bitacora_general"]
   columnas_disponibles = (
       list(df_all.columns)
       if not df_all.empty
@@ -398,33 +375,32 @@ elif menu == "Panel de Administración":
       ]
   )
 
-  # Usamos un expander minimalista y limpio
-  with st.expander(
-      "🎛️ Panel de Filtros y Configuración (Compacto)", expanded=True
-  ):
-    # Fila 1: Configuración de la Matriz en 3 columnas pequeñas
-    cf1, cf2, cf3 = st.columns(3)
-    with cf1:
+  with st.expander("🎛️ Filtros y Configuración de Matriz", expanded=True):
+    # Fila única para la estructura de la matriz
+    sc1, sc2, sc3 = st.columns(3)
+    with sc1:
       col_filas = st.selectbox(
-          "Filas:",
+          "Filas",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Maquina")
               if "Maquina" in columnas_disponibles
               else 0
           ),
+          label_visibility="collapsed",
       )
-    with cf2:
+    with sc2:
       col_columnas = st.selectbox(
-          "Columnas:",
+          "Columnas",
           columnas_disponibles,
           index=(
               columnas_disponibles.index("Fecha")
               if "Fecha" in columnas_disponibles
               else 0
           ),
+          label_visibility="collapsed",
       )
-    with cf3:
+    with sc3:
       opciones_valores = [
           "Horas_Decimales",
           "_Segundos_Totales",
@@ -434,9 +410,9 @@ elif menu == "Panel de Administración":
           for c in columnas_disponibles
           if c not in ["Horas_Decimales", "_Segundos_Totales", "Minutos_Muertos"]
       ]
-      col_valor = st.selectbox("Valores:", opciones_valores, index=0)
-
-    st.markdown("---")
+      col_valor = st.selectbox(
+          "Valores", opciones_valores, index=0, label_visibility="collapsed"
+      )
 
     # Preparar datos temporales para filtros de fecha
     df_temp_filtro = df_all.copy()
@@ -456,107 +432,100 @@ elif menu == "Panel de Administración":
       df_temp_filtro["_Anio"] = "(Sin fecha)"
       df_temp_filtro["_Mes"] = "Mes no especificado"
 
-    # Fila 2: Filtros Interactivos organizados de forma práctica
-    ff1, ff2, ff3 = st.columns(3)
+    # Filtros interactivos distribuidos de forma limpia en 4 columnas
+    fc1, fc2, fc3, fc4 = st.columns(4)
 
-    with ff1:
-      if not df_all.empty and col_filas in df_all.columns:
-        maquinas_disponibles = sorted(
-            list(df_all[col_filas].dropna().astype(str).unique())
+    with fc1:
+      maquinas_disponibles = (
+          sorted(list(df_all[col_filas].dropna().astype(str).unique()))
+          if not df_all.empty and col_filas in df_all.columns
+          else []
+      )
+      maq_seleccionadas = st.multiselect(
+          "Máquinas",
+          options=maquinas_disponibles,
+          default=[],
+          placeholder="Todas las máquinas",
+      )
+
+    with fc2:
+      anios_disp = (
+          sorted(list(df_temp_filtro["_Anio"].dropna().astype(str).unique()))
+          if not df_temp_filtro.empty
+          else []
+      )
+      anio_elegido = st.selectbox(
+          "Año", options=["(Todos los años)"] + anios_disp, index=0
+      )
+
+      if anio_elegido != "(Todos los años)":
+        df_anio_filtrado = df_temp_filtro[
+            df_temp_filtro["_Anio"] == anio_elegido
+        ]
+        meses_disp = sorted(
+            list(df_anio_filtrado["_Mes"].dropna().astype(str).unique())
         )
-        maq_seleccionadas = st.multiselect(
-            f"Filtro {col_filas}:",
-            options=maquinas_disponibles,
-            default=[],
-            placeholder="Selecciona...",
+        meses_seleccionados = st.multiselect(
+            "Mes(es)", options=meses_disp, default=[], placeholder="Todos"
         )
+        dias_seleccionados = []
+        if meses_seleccionados:
+          df_mes_filtrado = df_anio_filtrado[
+              df_anio_filtrado["_Mes"].isin(meses_seleccionados)
+          ]
+          dias_disp = sorted(
+              list(df_mes_filtrado[col_columnas].dropna().astype(str).unique())
+          )
+          dias_seleccionados = st.multiselect(
+              "Días", options=dias_disp, default=[], placeholder="Todos"
+          )
       else:
-        maq_seleccionadas = []
+        meses_seleccionados = []
+        dias_seleccionados = []
 
+    with fc3:
       turno_opts = (
           sorted(list(df_all["Turno"].dropna().astype(str).unique()))
           if not df_all.empty and "Turno" in df_all.columns
           else []
       )
       f_turno = st.selectbox(
-          "Turno:", options=["(Todos)"] + turno_opts, index=0
+          "Turno", options=["(Todos)"] + turno_opts, index=0
       )
 
-    with ff2:
-      if not df_temp_filtro.empty:
-        anios_disp = sorted(
-            list(df_temp_filtro["_Anio"].dropna().astype(str).unique())
-        )
-        anio_elegido = st.selectbox(
-            "Año:", options=["(Ninguno)"] + anios_disp, index=0
-        )
+      reporta_opts = (
+          sorted(list(df_all["Quien_Reporta"].dropna().astype(str).unique()))
+          if not df_all.empty and "Quien_Reporta" in df_all.columns
+          else []
+      )
+      rep_seleccionados = st.multiselect(
+          "Quién Reporta",
+          options=reporta_opts,
+          default=[],
+          placeholder="Todos",
+      )
 
-        if anio_elegido != "(Ninguno)":
-          df_anio_filtrado = df_temp_filtro[
-              df_temp_filtro["_Anio"] == anio_elegido
-          ]
-          meses_disp = sorted(
-              list(df_anio_filtrado["_Mes"].dropna().astype(str).unique())
-          )
-          meses_seleccionados = st.multiselect(
-              "Mes(es):", options=meses_disp, default=[], placeholder="Meses..."
-          )
-
-          if meses_seleccionados:
-            df_mes_filtrado = df_anio_filtrado[
-                df_anio_filtrado["_Mes"].isin(meses_seleccionados)
-            ]
-            dias_disp = sorted(
-                list(
-                    df_mes_filtrado[col_columnas].dropna().astype(str).unique()
-                )
-            )
-            dias_seleccionados = st.multiselect(
-                "Días:", options=dias_disp, default=[], placeholder="Días..."
-            )
-          else:
-            dias_seleccionados = []
-        else:
-          meses_seleccionados = []
-          dias_seleccionados = []
-      else:
-        dias_seleccionados = []
-
-    with ff3:
-      if not df_all.empty and "Quien_Reporta" in df_all.columns:
-        reporta_opts = sorted(
-            list(df_all["Quien_Reporta"].dropna().astype(str).unique())
-        )
-        rep_seleccionados = st.multiselect(
-            "Quién Reporta:",
-            options=reporta_opts,
-            default=[],
-            placeholder="Técnicos...",
-        )
-      else:
-        rep_seleccionados = []
-
+    with fc4:
       texto_busqueda = st.text_input(
-          "Buscar palabra clave:", "", placeholder="Diagnóstico / Solución..."
+          "Búsqueda rápida", "", placeholder="Diagnóstico / Solución..."
       )
 
+  # Aplicar filtros al DataFrame
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
     if maq_seleccionadas and col_filas in df_view.columns:
       df_view = df_view[
           df_view[col_filas].astype(str).isin(maq_seleccionadas)
       ]
-    else:
-      df_view = df_view.iloc[0:0]
 
     if "dias_seleccionados" in locals() and dias_seleccionados and col_columnas in df_view.columns:
       df_view = df_view[
           df_view[col_columnas].astype(str).isin(dias_seleccionados)
       ]
-    elif "_Anio" in locals() and anio_elegido != "(Ninguno)":
-      pass
-    else:
-      df_view = df_view.iloc[0:0]
+    elif anio_elegido != "(Todos los años)":
+      df_view = df_view[df_view["_Anio"] == anio_elegido]
+      if "meses_seleccionados" in locals() and meses_seleccionados:
+        df_view = df_view[df_view["_Mes"].isin(meses_seleccionados)]
 
     if f_turno != "(Todos)" and "Turno" in df_view.columns:
       df_view = df_view[df_view["Turno"].astype(str) == f_turno]
@@ -565,8 +534,6 @@ elif menu == "Panel de Administración":
       df_view = df_view[
           df_view["Quien_Reporta"].astype(str).isin(rep_seleccionados)
       ]
-    else:
-      pass  # Si no selecciona técnicos, muestra todos los filtrados
 
     if texto_busqueda:
       mask = (
@@ -618,10 +585,7 @@ elif menu == "Panel de Administración":
       st.warning(f"No se pudo generar la tabla cruzada: {ex}")
       st.dataframe(df_view, use_container_width=True)
   else:
-    st.info(
-        "Selecciona los filtros arriba (Máquinas, Fechas y Quién Reporta) para"
-        " visualizar los datos."
-    )
+    st.info("No hay datos que coincidan con los filtros seleccionados.")
 
   st.markdown("---")
   st.subheader("📈 Gráfica Apilada de Tiempo Muerto (Estilo Excel)")
@@ -677,9 +641,6 @@ elif menu == "Panel de Administración":
 
       st.plotly_chart(fig, use_container_width=True)
     else:
-      st.info(
-          "No hay datos numéricos suficientes para graficar en el rango"
-          " seleccionado."
-      )
+      st.info("Sin datos numéricos suficientes para graficar.")
   else:
     st.info("Sin datos para mostrar en la gráfica.")
