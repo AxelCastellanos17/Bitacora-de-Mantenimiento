@@ -1,4 +1,3 @@
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
 from datetime import datetime
 import io
 import os
@@ -23,36 +22,31 @@ menu = st.sidebar.selectbox(
     ],
 )
 
-EXCEL_FILE = "Bitacora.xlsx"
+# ENLACE CSV DE GOOGLE SHEETS
+GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
 
 
-# FUNCIÓN DE CONVERSIÓN Y LIMPIEZA ROBUSTA (Inmune a corrupción)
-def convertir_y_limpiar_excel(uploaded_file_or_path):
+# FUNCIÓN DE CONVERSIÓN Y LIMPIEZA
+def cargar_y_limpiar_datos(fuente):
   try:
-    if isinstance(uploaded_file_or_path, str):
-      if os.path.exists(uploaded_file_or_path):
-        df = pd.read_excel(uploaded_file_or_path)
-      else:
-        return pd.DataFrame()
-    else:
-      # Detecta si es CSV, TXT o Excel automáticamente
-      nombre = uploaded_file_or_path.name.lower()
+    if isinstance(fuente, str) and fuente.startswith("http"):
+      df = pd.read_csv(fuente, encoding="utf-8")
+    elif isinstance(fuente, str) and os.path.exists(fuente):
+      df = pd.read_excel(fuente)
+    elif hasattr(fuente, "name"):
+      nombre = fuente.name.lower()
       if nombre.endswith(".csv"):
-        df = pd.read_csv(uploaded_file_or_path, encoding="latin-1")
-      elif nombre.endswith(".txt"):
-        df = pd.read_csv(
-            uploaded_file_or_path, sep=None, engine="python", encoding="latin-1"
-        )
+        df = pd.read_csv(fuente, encoding="latin-1")
       else:
-        df = pd.read_excel(uploaded_file_or_path)
+        df = pd.read_excel(fuente)
+    else:
+      df = pd.DataFrame(fuente)
 
     if df.empty:
       return pd.DataFrame()
 
-    # Limpiar nombres de columnas (eliminar espacios y estandarizar)
     df.columns = df.columns.astype(str).str.strip()
 
-    # Mapeo inteligente de sinónimos para asegurar compatibilidad total con tus tablas
     mapa_columnas = {
         "maquina": "Maquina",
         "máquina": "Maquina",
@@ -72,7 +66,6 @@ def convertir_y_limpiar_excel(uploaded_file_or_path):
         "descripción de falla": "Diagnostico",
         "solucion": "Solucion",
         "solución": "Solucion",
-        "acciones realizadas": "Solucion",
         "tiempo de falla": "Tiempo de Falla",
         "tiempo muerto": "Tiempo de Falla",
     }
@@ -84,14 +77,12 @@ def convertir_y_limpiar_excel(uploaded_file_or_path):
         nuevo_mapeo[col] = mapa_columnas[col_lower]
     df = df.rename(columns=nuevo_mapeo)
 
-    # Forzar todas las columnas a texto para evitar errores de tipo o nulos fantasma
     for col in df.columns:
       df[col] = df[col].astype(str).str.strip()
       df[col] = df[col].replace(
           ["nan", "None", "NAT", "NaT", "NaN", ""], "N/A"
       )
 
-    # Columnas mínimas requeridas garantizadas
     columnas_requeridas = [
         "Fecha",
         "Departamento",
@@ -118,39 +109,19 @@ def convertir_y_limpiar_excel(uploaded_file_or_path):
 
     return df
   except Exception as e:
-    st.error(f"Error al procesar el archivo: {e}")
     return pd.DataFrame()
 
 
-# PERSISTENCIA AUTOMÁTICA
+# PERSISTENCIA AUTOMÁTICA CON GOOGLE SHEETS
 if "bitacora_general" not in st.session_state:
-  if os.path.exists(EXCEL_FILE):
-    st.session_state["bitacora_general"] = convertir_y_limpiar_excel(EXCEL_FILE)
-  else:
-    # Datos iniciales por defecto si no existe archivo previo
-    data_inicial = pd.DataFrame({
-        "Fecha": ["2026-10-31", "2026-10-30"],
-        "Departamento": ["Departamento de Mantenimiento CH"] * 2,
-        "Turno": ["Turno Diurno", "Turno Nocturno"],
-        "Quien_Reporta": ["Carlos Castellanos", "Axel Castellanos"],
-        "Maquina": ["Maquina 1", "Maquina 10"],
-        "Seccion_Maquina": ["Inyector", "Mesa"],
-        "Campo_Trabajo": ["Mecanico", "Electrico"],
-        "Diagnostico": ["Falla en sello", "Revisión general"],
-        "Solucion": ["Cambio de o-ring", "Ajuste de parámetros"],
-        "Repuesto": ["N/A", "Fusible 6A"],
-        "Hora_Inicial": ["08:00 AM", "09:00 AM"],
-        "Hora_Final": ["08:11 AM", "09:25 AM"],
-        "Observaciones": ["Ninguna", "Operando"],
-        "Tiempo de Falla": ["00:11:00", "00:25:00"],
-    })
-    st.session_state["bitacora_general"] = convertir_y_limpiar_excel(
-        data_inicial
+  if GOOGLE_SHEET_CSV_URL.strip() != "":
+    st.session_state["bitacora_general"] = cargar_y_limpiar_datos(
+        GOOGLE_SHEET_CSV_URL
     )
-    try:
-      st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
-    except:
-      pass
+    st.session_state["fuente_activa"] = "Google Sheets (Sincronizado)"
+  else:
+    st.session_state["bitacora_general"] = pd.DataFrame()
+    st.session_state["fuente_activa"] = "Sin fuente configurada"
 
 if "departamentos" not in st.session_state:
   st.session_state["departamentos"] = [
@@ -316,17 +287,39 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             [st.session_state["bitacora_general"], df_nuevo],
             ignore_index=True,
         )
-        try:
-          st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
-        except Exception as ex:
-          st.warning(f"Guardado local con advertencia: {ex}")
-        st.success("¡Reporte enviado y guardado con éxito!")
+        st.success("¡Reporte agregado con éxito a la sesión actual!")
 
 # 3. PANEL DE ADMINISTRACIÓN
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control")
 
-  col_d, col_a, col_b = st.columns(3)
+  # --- SECCIÓN DE ESTADO DE CONEXIÓN Y BOTÓN DE ACTUALIZACIÓN ---
+  st.markdown("### 🟢 Estado de Sincronización")
+  col_est1, col_est2 = st.columns([3, 1])
+
+  with col_est1:
+    total_reg = len(st.session_state.get("bitacora_general", pd.DataFrame()))
+    st.success(
+        f"✅ **Fuente Conectada:** Google Sheets | **Registros cargados:**"
+        f" {total_reg}"
+    )
+
+  with col_est2:
+    if st.button(
+        "🔄 Actualizar Datos", type="primary", use_container_width=True
+    ):
+      if GOOGLE_SHEET_CSV_URL.strip() != "":
+        st.session_state["bitacora_general"] = cargar_y_limpiar_datos(
+            GOOGLE_SHEET_CSV_URL
+        )
+        st.success("¡Datos recargados con éxito!")
+        st.rerun()
+      else:
+        st.error("No hay URL configurada.")
+
+  st.markdown("---")
+
+  col_d, col_a = st.columns(2)
   with col_d:
     df_all = st.session_state["bitacora_general"]
     if not df_all.empty:
@@ -341,104 +334,13 @@ elif menu == "Panel de Administración":
       )
 
   with col_a:
-    archivo_subido = st.file_uploader(
-        "📂 Subir Archivo Excel", type=["xlsx", "csv", "txt"]
-    )
-    if archivo_subido is not None:
-      if st.button("🔄 Procesar y Convertir Archivo"):
-        df_convertido = convertir_y_limpiar_excel(archivo_subido)
-        if not df_convertido.empty:
-          st.session_state["bitacora_general"] = df_convertido
-          try:
-            st.session_state["bitacora_general"].to_excel(
-                EXCEL_FILE, index=False
-            )
-          except:
-            pass
-          st.success(
-              f"✅ ¡Archivo convertido e integrado con éxito"
-              f" ({len(df_convertido)} registros cargados)!"
-          )
-          st.rerun()
-        else:
-          st.error("El archivo está vacío o no se pudo leer.")
-
-  with col_b:
-    st.write("🗑️ **Gestión de Datos**")
-    if st.button("🗑️ Borrar y Limpiar Todos los Datos"):
-      st.session_state["bitacora_general"] = pd.DataFrame(
-          columns=[
-              "Fecha",
-              "Departamento",
-              "Turno",
-              "Quien_Reporta",
-              "Maquina",
-              "Seccion_Maquina",
-              "Campo_Trabajo",
-              "Diagnostico",
-              "Solucion",
-              "Repuesto",
-              "Hora_Inicial",
-              "Hora_Final",
-              "Observaciones",
-              "Tiempo de Falla",
-          ]
-      )
-      if os.path.exists(EXCEL_FILE):
-        try:
-          os.remove(EXCEL_FILE)
-        except:
-          pass
-      st.success("¡Se han borrado los datos correctamente!")
-      st.rerun()
-
-  # PEGAR DATOS DIRECTAMENTE
-  st.markdown("---")
-  st.subheader("📋 Pegar Datos Directamente (Copia y Pega desde Excel)")
-  texto_pegado = st.text_area(
-      "Selecciona tus celdas en Excel (Ctrl+C) y pégalas aquí (Ctrl+V):",
-      height=120,
-      placeholder="Pega aquí los datos copiados de Excel...",
-  )
-  if st.button("📥 Procesar y Adaptar Datos Pegados"):
-    if texto_pegado:
-      try:
-        df_pegado = pd.read_csv(
-            io.StringIO(texto_pegado), sep="\t", encoding="latin-1"
+    if st.button("🔄 Sincronizar desde Google Sheet"):
+      if GOOGLE_SHEET_CSV_URL.strip() != "":
+        st.session_state["bitacora_general"] = cargar_y_limpiar_datos(
+            GOOGLE_SHEET_CSV_URL
         )
-        if not df_pegado.empty:
-          df_pegado_limpio = convertir_y_limpiar_excel(
-              io.StringIO(texto_pegado)
-          )
-          # Si el de arriba falla por ser IO string simple, lo procesamos directo:
-          if df_pegado_limpio.empty:
-            df_pegado_limpio = df_pegado
-
-          st.session_state["bitacora_general"] = pd.concat(
-              [st.session_state["bitacora_general"], df_pegado_limpio],
-              ignore_index=True,
-              sort=False,
-          )
-          st.session_state["bitacora_general"] = convertir_y_limpiar_excel(
-              st.session_state["bitacora_general"]
-          )
-          try:
-            st.session_state["bitacora_general"].to_excel(
-                EXCEL_FILE, index=False
-            )
-          except:
-            pass
-          st.success(
-              f"✅ ¡Se integraron {len(df_pegado_limpio)} registros nuevos"
-              " exitosamente!"
-          )
-          st.rerun()
-        else:
-          st.warning("El texto pegado no contiene datos válidos.")
-      except Exception as ex:
-        st.error(f"Error al procesar los datos pegados: {ex}")
-    else:
-      st.warning("Pega los datos en el cuadro de texto antes de procesar.")
+        st.success("¡Datos sincronizados correctamente desde Google Sheets!")
+        st.rerun()
 
   # ============================================================================
   # PANEL DE FILTROS Y CONFIGURACIÓN DE MATRIZ
@@ -516,7 +418,6 @@ elif menu == "Panel de Administración":
 
     f_col1, f_col2, f_col3, f_col4 = st.columns(4)
 
-    # 1. Filtro Multiselección de Máquinas
     with f_col1:
       if not df_all.empty and col_filas in df_all.columns:
         maquinas_disponibles = sorted(
@@ -531,7 +432,6 @@ elif menu == "Panel de Administración":
       else:
         maq_seleccionadas = []
 
-    # 2. SELECCIÓN JERÁRQUICA: AÑO ➔ MES(ES) ➔ DÍA(S)
     with f_col2:
       if not df_temp_filtro.empty:
         anios_disp = sorted(
@@ -580,7 +480,6 @@ elif menu == "Panel de Administración":
       else:
         dias_seleccionados = []
 
-    # 3. Filtro por Turno
     with f_col3:
       turno_opts = (
           sorted(list(df_all["Turno"].dropna().astype(str).unique()))
@@ -593,7 +492,6 @@ elif menu == "Panel de Administración":
           index=0,
       )
 
-    # 4. Filtro Multiselección de "Quién Reporta"
     with f_col4:
       if not df_all.empty and "Quien_Reporta" in df_all.columns:
         reporta_opts = sorted(
@@ -616,7 +514,6 @@ elif menu == "Panel de Administración":
         placeholder="Escribe para buscar...",
     )
 
-  # Aplicar todos los filtros al DataFrame final
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
     if maq_seleccionadas and col_filas in df_view.columns:
@@ -653,7 +550,6 @@ elif menu == "Panel de Administración":
       )
       df_view = df_view[mask]
 
-  # 1. VISUALIZACIÓN DE LA TABLA CRUZADA (MATRIZ)
   st.markdown("---")
   st.subheader("📋 Total de Tiempo Muerto / Falla (Tabla Cruzada)")
 
@@ -687,7 +583,6 @@ elif menu == "Panel de Administración":
         " visualizar los datos."
     )
 
-  # 2. GRÁFICA DE BARRAS APILADAS CONTROLADA
   st.markdown("---")
   st.subheader("📈 Gráfica de Tiempo de Paros de Máquinas (Apilada)")
 
