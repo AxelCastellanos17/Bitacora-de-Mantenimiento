@@ -641,7 +641,7 @@ elif menu == "Panel de Administración":
   st.subheader("📈 Gráfica Apilada de Tiempo Muerto (Estilo Excel)")
 
   if not tabla_numerica.empty:
-    # 3. Preparamos los datos para la gráfica profesional con Plotly
+    # 3. Preparamos los datos seguros y limpios para la gráfica con Plotly
     df_grafica = tabla_numerica.drop(index=["Total General"], errors="ignore")
     if "Total General" in df_grafica.columns:
       df_grafica = df_grafica.drop(columns=["Total General"], errors="ignore")
@@ -651,9 +651,12 @@ elif menu == "Panel de Administración":
 
     df_grafica = df_grafica.apply(pd.to_numeric, errors="coerce").fillna(0)
 
-    # Transformamos el formato ancho a formato largo para Plotly
+    # Convertimos los nombres de las columnas a string para evitar conflictos de tipo en Plotly
+    df_grafica.columns = [str(c) for c in df_grafica.columns]
+
+    # Transformamos asegurando el índice correcto como columna de filas
     df_melted = df_grafica.reset_index().melt(
-        id_vars=col_filas, var_name="Fecha_Col", value_name="Horas_Val"
+        id_vars=[col_filas], var_name="Fecha_Col", value_name="Horas_Val"
     )
 
     if not df_melted.empty and df_melted["Horas_Val"].sum() > 0:
