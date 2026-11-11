@@ -25,42 +25,114 @@ menu = st.sidebar.selectbox(
 EXCEL_FILE = "Bitacora.xlsx"
 
 
-# Función auxiliar para limpiar espacios fantasma en los textos y nombres
-def limpiar_dataframe(df):
+# FUNCIÓN INTELIGENTE: Limpia, adapta y homologa cualquier Excel o texto pegado
+def adaptar_y_limpiar_dataframe(df):
   if df.empty:
-    return df
+    return pd.DataFrame()
+
+  # Limpiar espacios en blanco de los nombres de columnas
+  df.columns = df.columns.astype(str).str.strip()
+
+  # Diccionario de sinónimos comunes para mapear automáticamente tus columnas de Excel
+  mapa_columnas = {
+      "maquina": "Maquina",
+      "máquina": "Maquina",
+      "equipos": "Maquina",
+      "equipo": "Maquina",
+      "fecha": "Fecha",
+      "dia": "Fecha",
+      "turno": "Turno",
+      "quien reporta": "Quien_Reporta",
+      "reporta": "Quien_Reporta",
+      "técnico": "Quien_Reporta",
+      "tecnico": "Quien_Reporta",
+      "diagnostico": "Diagnostico",
+      "diagnóstico": "Diagnostico",
+      "falla": "Diagnostico",
+      "descripcion": "Diagnostico",
+      "solucion": "Solucion",
+      "solución": "Solucion",
+      "tiempo muerto": "Tiempo de Falla",
+      "tiempo de falla": "Tiempo de Falla",
+      "tiempo": "Tiempo de Falla",
+  }
+
+  # Renombrar columnas si coinciden con los sinónimos
+  nuevo_mapeo = {}
+  for col in df.columns:
+    col_lower = col.lower()
+    if col_lower in mapa_columnas:
+      nuevo_mapeo[col] = mapa_columnas[col_lower]
+  df = df.rename(columns=nuevo_mapeo)
+
+  # Asegurar columnas mínimas requeridas para que la app funcione siempre
+  columnas_requeridas = [
+      "Fecha",
+      "Departamento",
+      "Turno",
+      "Quien_Reporta",
+      "Maquina",
+      "Seccion_Maquina",
+      "Campo_Trabajo",
+      "Diagnostico",
+      "Solucion",
+      "Repuesto",
+      "Hora_Inicial",
+      "Hora_Final",
+      "Observaciones",
+      "Tiempo de Falla",
+  ]
+
+  for col in columnas_requeridas:
+    if col not in df.columns:
+      # Si no existe la columna numérica de tiempo, intenta buscar alguna que parezca tiempo o ponla en 0
+      if col == "Tiempo de Falla":
+        df[col] = 1  # Valor por defecto para conteo si no viene especificado
+      else:
+        df[col] = "N/A"
+
+  # Limpiar espacios en blanco de todos los textos
   for col in df.select_dtypes(include=["object"]).columns:
     df[col] = df[col].astype(str).str.strip()
+
   return df
 
 
-# PERSISTENCIA AUTOMÁTICA: Carga los datos guardados al iniciar la app
+# PERSISTENCIA AUTOMÁTICA O CREACIÓN DE DATOS INICIALES DE PRUEBA
 if "bitacora_general" not in st.session_state:
   if os.path.exists(EXCEL_FILE):
     try:
-      st.session_state["bitacora_general"] = limpiar_dataframe(
-          pd.read_excel(EXCEL_FILE)
+      df_carga = pd.read_excel(EXCEL_FILE)
+      st.session_state["bitacora_general"] = adaptar_y_limpiar_dataframe(
+          df_carga
       )
     except:
       st.session_state["bitacora_general"] = pd.DataFrame()
   else:
-    st.session_state["bitacora_general"] = pd.DataFrame(
-        columns=[
-            "Fecha",
-            "Departamento",
-            "Turno",
-            "Quien_Reporta",
-            "Maquina",
-            "Seccion_Maquina",
-            "Campo_Trabajo",
-            "Diagnostico",
-            "Solucion",
-            "Repuesto",
-            "Hora_Inicial",
-            "Hora_Final",
-            "Observaciones",
-        ]
+    # Si está totalmente vacía al iniciar, creamos datos base de ejemplo para que la app cree su propia data
+    data_inicial = pd.DataFrame({
+        "Fecha": ["2026-10-31", "2026-10-30", "2026-10-29", "2026-10-28"],
+        "Departamento": ["Departamento de Mantenimiento CH"] * 4,
+        "Turno": ["Turno Diurno", "Turno Nocturno", "Turno Diurno", "Turno Nocturno"],
+        "Quien_Reporta": ["Carlos Castellanos", "Axel Castellanos", "Manuel Hernandez", "Bayron Enamorado"],
+        "Maquina": ["Maquina 1", "Maquina 10", "Maquina 11", "Maquina 12"],
+        "Seccion_Maquina": ["Inyector", "Mesa", "Central Hidraulica", "Gabinete Electrico"],
+        "Campo_Trabajo": ["Mecanico", "Electrico", "Hidraulico", "Refrigeración"],
+        "Diagnostico": ["Falla en sello", "Revisión general", "Baja presión", "Sensor dañado"],
+        "Solucion": ["Cambio de o-ring", "Ajuste de parámetros", "Purga de líneas", "Reemplazo de sensor"],
+        "Repuesto": ["N/A", "Fusible 6A", "N/A", "Tornillo M10"],
+        "Hora_Inicial": ["08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM"],
+        "Hora_Final": ["08:11 AM", "09:25 AM", "10:35 AM", "11:20 AM"],
+        "Observaciones": ["Ninguna", "Operando", "Revisado", "Ok"],
+        "Tiempo de Falla": [1, 1, 1, 1],
+    })
+    st.session_state["bitacora_general"] = adaptar_y_limpiar_dataframe(
+        data_inicial
     )
+    try:
+      st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
+    except:
+      pass
 
 if "departamentos" not in st.session_state:
   st.session_state["departamentos"] = [
@@ -219,13 +291,14 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             "Hora_Inicial": h_ini,
             "Hora_Final": h_fin,
             "Observaciones": observaciones,
+            "Tiempo de Falla": 1,
         }
         df_nuevo = pd.DataFrame([nueva_fila])
         st.session_state["bitacora_general"] = pd.concat(
             [st.session_state["bitacora_general"], df_nuevo],
             ignore_index=True,
         )
-        st.session_state["bitacora_general"] = limpiar_dataframe(
+        st.session_state["bitacora_general"] = adaptar_y_limpiar_dataframe(
             st.session_state["bitacora_general"]
         )
         try:
@@ -271,11 +344,13 @@ elif menu == "Panel de Administración":
           else:
             df_temp = pd.read_excel(archivo_subido)
 
-          st.session_state["bitacora_general"] = limpiar_dataframe(df_temp)
+          st.session_state["bitacora_general"] = adaptar_y_limpiar_dataframe(
+              df_temp
+          )
           st.session_state["bitacora_general"].to_excel(EXCEL_FILE, index=False)
           st.session_state["archivo_procesado"] = archivo_subido.name
           st.success(
-              f"✅ Archivo abierto y guardado con éxito"
+              f"✅ Archivo abierto y adaptado con éxito"
               f" ({len(st.session_state['bitacora_general'])} registros)"
           )
         except Exception as e:
@@ -299,6 +374,7 @@ elif menu == "Panel de Administración":
               "Hora_Inicial",
               "Hora_Final",
               "Observaciones",
+              "Tiempo de Falla",
           ]
       )
       if "archivo_procesado" in st.session_state:
@@ -311,7 +387,7 @@ elif menu == "Panel de Administración":
       st.success("¡Se han borrado los datos cargados correctamente!")
       st.rerun()
 
-  # PEGAR DATOS DIRECTAMENTE
+  # PEGAR DATOS DIRECTAMENTE (ADAPTACIÓN AUTOMÁTICA)
   st.markdown("---")
   st.subheader("📋 Pegar Datos Directamente (Copia y Pega desde Excel)")
   texto_pegado = st.text_area(
@@ -319,20 +395,20 @@ elif menu == "Panel de Administración":
       height=120,
       placeholder="Pega aquí los datos copiados de Excel...",
   )
-  if st.button("📥 Procesar y Agregar Datos Pegados"):
+  if st.button("📥 Procesar y Adaptar Datos Pegados"):
     if texto_pegado:
       try:
         df_pegado = pd.read_csv(
             io.StringIO(texto_pegado), sep="\t", encoding="latin-1"
         )
         if not df_pegado.empty:
-          df_pegado = limpiar_dataframe(df_pegado)
+          df_pegado = adaptar_y_limpiar_dataframe(df_pegado)
           st.session_state["bitacora_general"] = pd.concat(
               [st.session_state["bitacora_general"], df_pegado],
               ignore_index=True,
               sort=False,
           )
-          st.session_state["bitacora_general"] = limpiar_dataframe(
+          st.session_state["bitacora_general"] = adaptar_y_limpiar_dataframe(
               st.session_state["bitacora_general"]
           )
           try:
@@ -342,8 +418,8 @@ elif menu == "Panel de Administración":
           except:
             pass
           st.success(
-              f"✅ ¡Se agregaron {len(df_pegado)} registros nuevos y se guardaron"
-              " permanentemente!"
+              f"✅ ¡Se adaptaron e integraron {len(df_pegado)} registros"
+              " exitosamente!"
           )
           st.rerun()
         else:
@@ -410,7 +486,6 @@ elif menu == "Panel de Administración":
 
     st.markdown("### 🔍 Filtros Interactivos Internos")
 
-    # PREPARACIÓN DE DATOS TEMPORALES PARA EL FILTRO JERÁRQUICO
     df_temp_filtro = df_all.copy()
     if not df_temp_filtro.empty and col_columnas in df_temp_filtro.columns:
       df_temp_filtro["_dt_temp"] = pd.to_datetime(
@@ -430,7 +505,7 @@ elif menu == "Panel de Administración":
 
     f_col1, f_col2, f_col3, f_col4 = st.columns(4)
 
-    # 1. Filtro Multiselección de Máquinas (Inicia vacío)
+    # 1. Filtro Multiselección de Máquinas
     with f_col1:
       if not df_all.empty and col_filas in df_all.columns:
         maquinas_disponibles = sorted(
@@ -494,7 +569,7 @@ elif menu == "Panel de Administración":
       else:
         dias_seleccionados = []
 
-    # 3. Filtro por Turno (Inicia vacío)
+    # 3. Filtro por Turno
     with f_col3:
       turno_opts = (
           sorted(list(df_all["Turno"].dropna().astype(str).unique()))
@@ -507,7 +582,7 @@ elif menu == "Panel de Administración":
           index=0,
       )
 
-    # 4. Filtro Multiselección de "Quién Reporta" (Con opción de Todos y checks)
+    # 4. Filtro Multiselección de "Quién Reporta"
     with f_col4:
       if not df_all.empty and "Quien_Reporta" in df_all.columns:
         reporta_opts = sorted(
@@ -533,7 +608,6 @@ elif menu == "Panel de Administración":
   # Aplicar todos los filtros al DataFrame final
   df_view = df_all.copy() if not df_all.empty else pd.DataFrame()
   if not df_view.empty:
-    # Filtro de Máquinas
     if maq_seleccionadas and col_filas in df_view.columns:
       df_view = df_view[
           df_view[col_filas].astype(str).isin(maq_seleccionadas)
@@ -541,7 +615,6 @@ elif menu == "Panel de Administración":
     else:
       df_view = df_view.iloc[0:0]
 
-    # Filtro de Fechas
     if "dias_seleccionados" in locals() and dias_seleccionados and col_columnas in df_view.columns:
       df_view = df_view[
           df_view[col_columnas].astype(str).isin(dias_seleccionados)
@@ -551,11 +624,9 @@ elif menu == "Panel de Administración":
     else:
       df_view = df_view.iloc[0:0]
 
-    # Filtro de Turno
     if f_turno != "(Todos / Ninguno)" and "Turno" in df_view.columns:
       df_view = df_view[df_view["Turno"].astype(str) == f_turno]
 
-    # Filtro de Quién Reporta (multiselección)
     if rep_seleccionados and "Quien_Reporta" in df_view.columns:
       df_view = df_view[
           df_view["Quien_Reporta"].astype(str).isin(rep_seleccionados)
@@ -590,7 +661,6 @@ elif menu == "Panel de Administración":
           aggfunc="count",
           fill_value=0,
       )
-      # Agregar totales estilo Excel
       tabla_dinamica["Total General"] = tabla_dinamica.sum(axis=1)
       total_columna = pd.DataFrame(tabla_dinamica.sum(axis=0)).T
       total_columna.index = ["Total General"]
