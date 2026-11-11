@@ -383,7 +383,7 @@ elif menu == "Panel de Administración":
   # PANEL DE FILTROS 
   # ============================================================================
   st.markdown("---")
-  st.subheader("⚙️ Panel de Filtros y Configuración de Matriz")
+  st.subheader("⚙️ Panel de Filtros y Configuración")
 
   df_all = st.session_state["bitacora_general"]
   columnas_disponibles = (
@@ -591,7 +591,7 @@ elif menu == "Panel de Administración":
       df_view = df_view[mask]
 
   st.markdown("---")
-  st.subheader("📋 Matriz de Tiempo Muerto (Formato Estilo [H]:mm:ss)")
+  st.subheader("📋 Tiempo Reportado")
 
   tabla_numerica = pd.DataFrame()
   if (
