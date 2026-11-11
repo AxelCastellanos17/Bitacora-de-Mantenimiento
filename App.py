@@ -26,7 +26,7 @@ menu = st.sidebar.selectbox(
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
 
 
-# FUNCIÓN PARA CONVERTIR HORAS A TIEMPO REAL Y FORMATO [H]:mm:ss
+# FUNCIÓN PARA CONVERTIR HORAS A TIEMPO REAL
 def calcular_tiempo_falla(df):
   try:
     if "Hora_Inicial" in df.columns and "Hora_Final" in df.columns:
@@ -44,10 +44,7 @@ def calcular_tiempo_falla(df):
           )
       )
 
-      # Guardar segundos totales para sumas numéricas en la matriz
       df["_Segundos_Totales"] = diferencia.dt.total_seconds().fillna(0)
-
-      # Minutos y horas flotantes para opciones de análisis
       df["_Tiempo_Minutos"] = df["_Segundos_Totales"] / 60
       df["_Tiempo_Horas"] = df["_Segundos_Totales"] / 3600
     else:
@@ -596,13 +593,15 @@ elif menu == "Panel de Administración":
   )
 
   tabla_dinamica = pd.DataFrame()
+  tabla_numerica = pd.DataFrame()
   if (
       not df_view.empty
       and col_filas in df_view.columns
       and col_columnas in df_view.columns
   ):
     try:
-      tabla_dinamica = pd.pivot_table(
+      # 1. Creamos la tabla numérica para cálculos y gráficas
+      tabla_numerica = pd.pivot_table(
           df_view,
           index=col_filas,
           columns=col_columnas,
@@ -610,12 +609,13 @@ elif menu == "Panel de Administración":
           aggfunc="sum",
           fill_value=0,
       )
-      tabla_dinamica["Total General"] = tabla_dinamica.sum(axis=1)
-      total_columna = pd.DataFrame(tabla_dinamica.sum(axis=0)).T
-      total_columna.index = ["Total General"]
-      tabla_dinamica = pd.concat([tabla_dinamica, total_columna])
+      tabla_numerica["Total General"] = tabla_numerica.sum(axis=1)
+      total_columna_num = pd.DataFrame(tabla_numerica.sum(axis=0)).T
+      total_columna_num.index = ["Total General"]
+      tabla_numerica = pd.concat([tabla_numerica, total_columna_num])
 
-      # Si se seleccionó _Segundos_Totales, formateamos la tabla visualmente a [H]:mm:ss
+      # 2. Creamos la tabla formateada visualmente
+      tabla_dinamica = tabla_numerica.copy()
       if col_valor == "_Segundos_Totales":
 
         def convertir_a_hms(segundos):
@@ -642,8 +642,8 @@ elif menu == "Panel de Administración":
   st.markdown("---")
   st.subheader("📈 Gráfica de Tiempo Muerto Total de Máquinas (Apilada)")
 
-  if not tabla_dinamica.empty:
-    df_grafica_barras = tabla_dinamica.drop(
+  if not tabla_numerica.empty:
+    df_grafica_barras = tabla_numerica.drop(
         index=["Total General"], errors="ignore"
     )
     if "Total General" in df_grafica_barras.columns:
@@ -657,3 +657,4 @@ elif menu == "Panel de Administración":
         "Datos"
     )
     st.bar_chart(df_cero)
+      
