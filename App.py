@@ -2,6 +2,7 @@ from datetime import datetime
 import io
 import os
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 st.set_page_config(
@@ -637,10 +638,10 @@ elif menu == "Panel de Administración":
     )
 
   st.markdown("---")
-  st.subheader("📈 Gráfica de Tiempo Muerto (Horas Decimales)")
+  st.subheader("📈 Gráfica Apilada de Tiempo Muerto (Estilo Excel)")
 
   if not tabla_numerica.empty:
-    # 3. Preparamos los datos limpios para la gráfica nativa de Streamlit
+    # 3. Preparamos los datos para la gráfica profesional con Plotly
     df_grafica = tabla_numerica.drop(index=["Total General"], errors="ignore")
     if "Total General" in df_grafica.columns:
       df_grafica = df_grafica.drop(columns=["Total General"], errors="ignore")
@@ -650,17 +651,56 @@ elif menu == "Panel de Administración":
 
     df_grafica = df_grafica.apply(pd.to_numeric, errors="coerce").fillna(0)
 
-    # Renderizamos la gráfica limpia de barras con Streamlit
-    st.bar_chart(df_grafica)
+    # Transformamos el formato ancho a formato largo para Plotly
+    df_melted = df_grafica.reset_index().melt(
+        id_vars=col_filas, var_name="Fecha_Col", value_name="Horas_Val"
+    )
 
-    # Tabla auxiliar elegante debajo de la gráfica con el desglose exacto en texto para cada máquina y fecha
-    with st.expander("🔍 Ver el tiempo exacto en formato de texto por barra"):
-      tabla_texto_barras = tabla_numerica.map(
-          lambda v: (
-              f"{int(v if col_valor=='Horas_Decimales' else v/3600)}h "
-              f"{int(((v if col_valor=='Horas_Decimales' else v/3600)%1)*60)}m"
-          )
+    if not df_melted.empty and df_melted["Horas_Val"].sum() > 0:
+      # Creamos la etiqueta de texto en formato hora exacta para cada sección de la barra
+      def val_a_texto_hms(v):
+        if pd.isna(v) or v <= 0:
+          return ""
+        segundos = v * 3600
+        h = int(segundos // 3600)
+        m = int((segundos % 3600) // 60)
+        s = int(segundos % 60)
+        return f"{h:02d}:{m:02d}:{s:02d}"
+
+      df_melted["Texto_Barra"] = df_melted["Horas_Val"].apply(val_a_texto_hms)
+
+      # Generamos la gráfica de barras apiladas con Plotly
+      fig = px.bar(
+          df_melted,
+          x=col_filas,
+          y="Horas_Val",
+          color="Fecha_Col",
+          text="Texto_Barra",
+          title="Tiempo Muerto Acumulado por Máquina y Fecha",
       )
-      st.dataframe(tabla_texto_barras, use_container_width=True)
+
+      # Estilo para poner el texto dentro de la barra en color negro con fondo transparente
+      fig.update_traces(
+          textfont_color="black",
+          textangle=0,
+          textposition="inside",
+          insidetextanchor="middle",
+      )
+
+      fig.update_layout(
+          barmode="stack",
+          xaxis_title=col_filas,
+          yaxis_title="Horas Equivalentes",
+          legend_title="Fecha",
+          plot_bgcolor="rgba(0,0,0,0)",
+          paper_bgcolor="rgba(0,0,0,0)",
+      )
+
+      st.plotly_chart(fig, use_container_width=True)
+    else:
+      st.info(
+          "No hay datos numéricos suficientes para graficar en el rango"
+          " seleccionado."
+      )
   else:
     st.info("Sin datos para mostrar en la gráfica.")
