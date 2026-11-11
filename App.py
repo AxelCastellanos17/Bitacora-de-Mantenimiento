@@ -416,7 +416,6 @@ elif menu == "Panel de Administración":
       df_temp_filtro["_dt_temp"] = pd.to_datetime(
           df_temp_filtro[col_columnas], errors="coerce"
       )
-      # Manejo inteligente de años: si es válido muestra el año, si está vacío se marca como 'Sin fecha'
       df_temp_filtro["_Anio"] = df_temp_filtro["_dt_temp"].dt.year.apply(
           lambda x: str(int(x)) if pd.notna(x) and x >= 2000 else "(Sin fecha)"
       )
@@ -626,7 +625,3 @@ elif menu == "Panel de Administración":
         "Datos"
     )
     st.bar_chart(df_cero)
-
-
-
-      
