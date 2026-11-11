@@ -638,7 +638,7 @@ elif menu == "Panel de Administración":
     )
 
   st.markdown("---")
-  st.subheader("📈 Gráfica Apilada de Tiempo Muerto (Estilo Excel)")
+  st.subheader("📈 Gráfica Apilada de Tiempo Reportado")
 
   if not tabla_numerica.empty:
     # 3. Preparamos la gráfica de barras apiladas directamente desde la matriz sin errores
