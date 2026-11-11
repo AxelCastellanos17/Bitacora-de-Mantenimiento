@@ -26,7 +26,7 @@ menu = st.sidebar.selectbox(
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
 
 
-# FUNCIÓN PARA CONVERTIR HORAS A TIEMPO REAL
+# FUNCIÓN PARA CONVERTIR HORAS A TIEMPO REAL Y FORMATO [H]:mm:ss
 def calcular_tiempo_falla(df):
   try:
     if "Hora_Inicial" in df.columns and "Hora_Final" in df.columns:
@@ -44,12 +44,18 @@ def calcular_tiempo_falla(df):
           )
       )
 
-      df["_Tiempo_Minutos"] = diferencia.dt.total_seconds().fillna(0) / 60
-      df["_Tiempo_Horas"] = diferencia.dt.total_seconds().fillna(0) / 3600
+      # Guardar segundos totales para sumas numéricas en la matriz
+      df["_Segundos_Totales"] = diferencia.dt.total_seconds().fillna(0)
+
+      # Minutos y horas flotantes para opciones de análisis
+      df["_Tiempo_Minutos"] = df["_Segundos_Totales"] / 60
+      df["_Tiempo_Horas"] = df["_Segundos_Totales"] / 3600
     else:
+      df["_Segundos_Totales"] = 0
       df["_Tiempo_Minutos"] = 0
       df["_Tiempo_Horas"] = 0
   except Exception:
+    df["_Segundos_Totales"] = 0
     df["_Tiempo_Minutos"] = 0
     df["_Tiempo_Horas"] = 0
   return df
@@ -421,6 +427,7 @@ elif menu == "Panel de Administración":
       )
     with c_f3:
       opciones_valores = [
+          "_Segundos_Totales",
           "_Tiempo_Minutos",
           "_Tiempo_Horas",
       ] + columnas_disponibles
@@ -585,7 +592,7 @@ elif menu == "Panel de Administración":
 
   st.markdown("---")
   st.subheader(
-      "📋 Total de Tiempo Muerto (Suma Calculada: Hora Final - Hora Inicial)"
+      "📋 Total de Tiempo Muerto (Formato Estilo [H]:mm:ss / Excel)"
   )
 
   tabla_dinamica = pd.DataFrame()
@@ -608,7 +615,21 @@ elif menu == "Panel de Administración":
       total_columna.index = ["Total General"]
       tabla_dinamica = pd.concat([tabla_dinamica, total_columna])
 
-      st.dataframe(tabla_dinamica, use_container_width=True)
+      # Si se seleccionó _Segundos_Totales, formateamos la tabla visualmente a [H]:mm:ss
+      if col_valor == "_Segundos_Totales":
+
+        def convertir_a_hms(segundos):
+          if pd.isna(segundos) or segundos <= 0:
+            return "00:00:00"
+          horas = int(segundos // 3600)
+          minutos = int((segundos % 3600) // 60)
+          segs = int(segundos % 60)
+          return f"{horas:02d}:{minutos:02d}:{segs:02d}"
+
+        tabla_formateada = tabla_dinamica.map(convertir_a_hms)
+        st.dataframe(tabla_formateada, use_container_width=True)
+      else:
+        st.dataframe(tabla_dinamica, use_container_width=True)
     except Exception as ex:
       st.warning(f"No se pudo generar la tabla cruzada: {ex}")
       st.dataframe(df_view, use_container_width=True)
