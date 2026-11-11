@@ -25,7 +25,7 @@ menu = st.sidebar.selectbox(
 
 # ENLACE CSV DE GOOGLE SHEETS
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
-
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyJKgLSeYOe3UOKBZ_4EWLZQzX4xMcK6sRHV_QokmjuVWxsmIBajGnlJ3kGpQm9NQq/exec"
 
 # FUNCIÓN PARA CALCULAR SEGUNDOS, MINUTOS Y HORAS DECIMALES
 def calcular_tiempo_falla(df):
@@ -305,19 +305,19 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
       else:
         nueva_fila = {
             "Fecha": str(fecha),
-            "Departamento": depto_activo,
             "Turno": turno,
+             "Maquina": maquina,
+             "Diagnostico": diagnostico,
+              "Solucion": solucion,
             "Quien_Reporta": quien_reporta,
-            "Maquina": maquina,
             "Seccion_Maquina": seccion,
             "Campo_Trabajo": campo_t,
-            "Diagnostico": diagnostico,
-            "Solucion": solucion,
-            "Repuesto": repuesto,
+            "Acompañamiento": acompanamiento,
+            "Requiere Repuesto?": repuesto,
+            "Detalle_Repuesto": detalle_Repuesto,
             "Hora_Inicial": h_ini,
             "Hora_Final": h_fin,
             "Observaciones": observaciones,
-            "Tiempo de Falla": "01:00:00",
         }
         df_nuevo = pd.DataFrame([nueva_fila])
         df_nuevo = calcular_tiempo_falla(df_nuevo)
