@@ -360,7 +360,7 @@ elif menu == "Panel de Administración":
       )
 
   # ============================================================================
-  # PANEL DE FILTROS Y CONFIGURACIÓN (COMPACTO Y BLINDADO)
+  # PANEL DE FILTROS Y CONFIGURACIÓN (COMPACTO Y BLINDAD
   # ============================================================================
   columnas_disponibles = (
       list(df_all.columns)
@@ -540,7 +540,7 @@ elif menu == "Panel de Administración":
       df_view = df_view[mask]
 
   st.markdown("---")
-  st.subheader("📋 Matriz de Tiempo Muerto (Formato Estilo [H]:mm:ss)")
+  st.subheader("📋 Matriz de Tiempo Reportado")
 
   tabla_numerica = pd.DataFrame()
   if (
