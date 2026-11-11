@@ -26,7 +26,7 @@ menu = st.sidebar.selectbox(
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
 
 
-# FUNCIÓN PARA CALCULAR SEGUNDOS Y FORMATO [H]:mm:ss
+# FUNCIÓN PARA CALCULAR SEGUNDOS Y MINUTOS
 def calcular_tiempo_falla(df):
   try:
     if "Hora_Inicial" in df.columns and "Hora_Final" in df.columns:
@@ -44,7 +44,6 @@ def calcular_tiempo_falla(df):
           )
       )
 
-      # Guardamos los segundos exactos
       df["_Segundos_Totales"] = diferencia.dt.total_seconds().fillna(0)
       df["Minutos_Muertos"] = df["_Segundos_Totales"] / 60
     else:
@@ -644,7 +643,7 @@ elif menu == "Panel de Administración":
           columns=["Total General"], errors="ignore"
       )
 
-    # Si está en formato texto [H]:mm:ss, para la gráfica usamos temporalmente los minutos derivados para que dibuje bien las barras
+    # Convertimos los segundos exactos a minutos decimales para que la gráfica pinte las barras correctamente
     if col_valor == "_Segundos_Totales":
       df_grafica_barras = df_grafica_barras / 60
 
