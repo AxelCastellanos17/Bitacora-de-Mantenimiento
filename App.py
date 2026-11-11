@@ -2,6 +2,7 @@ from datetime import datetime
 import io
 import os
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 st.set_page_config(
@@ -618,7 +619,6 @@ elif menu == "Panel de Administración":
       def convertir_a_hms_formato_excel(val):
         if pd.isna(val) or val <= 0:
           return "00:00:00"
-        # Si se usa Horas_Decimales multiplicamos por 3600, si son segundos se queda igual
         segundos = val * 3600 if col_valor == "Horas_Decimales" else val
         horas = int(segundos // 3600)
         minutos = int((segundos % 3600) // 60)
@@ -638,39 +638,73 @@ elif menu == "Panel de Administración":
     )
 
   st.markdown("---")
-  st.subheader("📈 Gráfica de Tiempo Muerto (Horas Decimales con Texto Exacto)")
+  st.subheader(
+      "📈 Gráfica de Tiempo Muerto (Con texto de hora exacta dentro de la"
+      " barra)"
+  )
 
   if not tabla_numerica.empty:
-    # 3. Preparamos el DataFrame numérico en horas decimales para la gráfica
-    df_grafica_barras = tabla_numerica.drop(
-        index=["Total General"], errors="ignore"
-    )
-    if "Total General" in df_grafica_barras.columns:
-      df_grafica_barras = df_grafica_barras.drop(
-          columns=["Total General"], errors="ignore"
-      )
+    # 3. Preparamos los datos para la gráfica profesional con Plotly
+    df_grafica = tabla_numerica.drop(index=["Total General"], errors="ignore")
+    if "Total General" in df_grafica.columns:
+      df_grafica = df_grafica.drop(columns=["Total General"], errors="ignore")
 
-    # Aseguramos que la gráfica trabaje con horas decimales puras
+    # Asegurar horas decimales puras para las barras
     if col_valor != "Horas_Decimales":
-      df_grafica_barras = df_grafica_barras / 3600
+      df_grafica = df_grafica / 3600
 
-    df_grafica_barras = df_grafica_barras.apply(
-        pd.to_numeric, errors="coerce"
-    ).fillna(0)
+    df_grafica = df_grafica.apply(pd.to_numeric, errors="coerce").fillna(0)
 
-    st.bar_chart(df_grafica_barras)
-
-    # 4. Tabla informativa debajo de la gráfica con el texto exacto de las horas para cada barra
-    with st.expander("📌 Ver desglose de hora exacta por barra"):
-      tabla_texto_grafica = tabla_numerica.map(
-          lambda v: (
-              f"{int(v if col_valor=='Horas_Decimales' else v/3600)}h "
-              f"{int(((v if col_valor=='Horas_Decimales' else v/3600)%1)*60)}m"
-          )
-      )
-      st.dataframe(tabla_texto_grafica, use_container_width=True)
-  else:
-    df_cero = pd.DataFrame({"Datos": ["Sin datos"], "Cantidad": [0]}).set_index(
-        "Datos"
+    # Convertimos el formato de tabla ancha a formato largo para Plotly Express
+    df_melted = df_grafica.reset_index().melt(
+        id_vars=col_filas, var_name="Fecha_Col", value_name="Horas_Val"
     )
-    st.bar_chart(df_cero)
+
+    if not df_melted.empty and df_melted["Horas_Val"].sum() > 0:
+      # Creamos la etiqueta de texto en formato hora legible para incrustarla dentro de la barra
+      def val_a_texto(v):
+        if pd.isna(v) or v <= 0:
+          return ""
+        segundos = v * 3600
+        h = int(segundos // 3600)
+        m = int((segundos % 3600) // 60)
+        return f"{h}h {m}m"
+
+      df_melted["Texto_Barra"] = df_melted["Horas_Val"].apply(val_a_texto)
+
+      # Generamos la gráfica de barras apiladas con Plotly
+      fig = px.bar(
+          df_melted,
+          x=col_filas,
+          y="Horas_Val",
+          color="Fecha_Col",
+          text="Texto_Barra",
+          title="Tiempo Muerto por Máquina y Fecha",
+      )
+
+      # Estilo para poner el texto transparente dentro de la barra con letra negra
+      fig.update_traces(
+          textfont_color="black",
+          textangle=0,
+          textposition="inside",
+          insidetextanchor="middle",
+          marker_color="rgba(31, 119, 180, 0.85)",
+      )
+
+      fig.update_layout(
+          barmode="stack",
+          xaxis_title=col_filas,
+          yaxis_title="Horas Decimales",
+          legend_title="Fecha",
+          plot_bgcolor="rgba(0,0,0,0)",
+          paper_bgcolor="rgba(0,0,0,0)",
+      )
+
+      st.plotly_chart(fig, use_container_width=True)
+    else:
+      st.info(
+          "No hay datos numéricos suficientes para graficar en el rango"
+          " seleccionado."
+      )
+  else:
+    st.info("Sin datos para mostrar en la gráfica.")
