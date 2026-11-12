@@ -19,12 +19,11 @@ st.markdown("---")
 menu = st.sidebar.selectbox(
     "Selecciona el Módulo",
     [
-        "Panel de Técnico (Reporte de Falla)",
+        "Panel de Técnico",
         "Panel de Administración",
-        "Diseñador de Formatos por Departamento",
-        "Departamento de Mantenimiento CH",
+        "Diseño",
         "Taller de Moldes",
-        "Administración",
+        "Gerencia",
     ],
 )
 
