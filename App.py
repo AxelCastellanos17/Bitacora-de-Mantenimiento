@@ -230,48 +230,51 @@ if menu == "Diseñador de Formatos por Departamento":
         st.success(f"¡Departamento {nuevo_dep} creado!")
         st.rerun()
 
-# 2. PANEL DE TÉCNICO (FORMULARIO DINÁMICO ESTRICTO)
+# 2. PANEL DE TÉCNICO (FORMULARIO DINÁMICO CON REACTIVIDAD ESTRICTA)
 elif menu == "Panel de Técnico (Reporte de Falla)":
   st.header("📝 Registro de Reporte de Mantenimiento")
 
-  with st.form("form_falla"):
-    # CAMPOS FIJOS INICIALES
-    depto_activo = st.selectbox(
-        "1. Selecciona el Departamento", st.session_state["departamentos"]
-    )
+  # CAMPOS FIJOS INICIALES FUERA DEL FORMULARIO PARA DETECTAR EL CAMBIO AL INSTANTE
+  depto_activo = st.selectbox(
+      "1. Selecciona el Departamento", st.session_state["departamentos"]
+  )
 
-    c1, c2 = st.columns(2)
-    with c1:
-      fecha = st.date_input("2. Fecha", value=datetime.today())
-      turno = st.selectbox("3. Turno", ["Turno Diurno", "Turno Nocturno"])
-    with c2:
-      quien_reporta = st.selectbox(
-          "4. Quién Reporta",
-          [
-              "Carlos Castellanos",
-              "Axel Castellanos",
-              "Manuel Hernandez",
-              "Bayron Enamorado",
-              "Arnold Matute",
-              "Ismael Castellanos",
-              "Isaac Bejarano",
-              "Jonathan Alberto",
-              "Gabriel Rivas",
-          ],
-      )
-
-    st.markdown("---")
-    # SELECTOR MAESTRO DE TIPO DE ACTIVIDAD
-    tipo_actividad = st.selectbox(
-        "5. Seleccione el Tipo de Actividad",
+  c1, c2 = st.columns(2)
+  with c1:
+    fecha = st.date_input("2. Fecha", value=datetime.today())
+    turno = st.selectbox("3. Turno", ["Turno Diurno", "Turno Nocturno"])
+  with c2:
+    quien_reporta = st.selectbox(
+        "4. Quién Reporta",
         [
-            "Falla",
-            "Ajuste de parámetros",
-            "Trabajo asignado",
-            "Cambio de molde",
+            "Carlos Castellanos",
+            "Axel Castellanos",
+            "Manuel Hernandez",
+            "Bayron Enamorado",
+            "Arnold Matute",
+            "Ismael Castellanos",
+            "Isaac Bejarano",
+            "Jonathan Alberto",
+            "Gabriel Rivas",
         ],
     )
 
+  st.markdown("---")
+
+  # SELECTOR MAESTRO CON REFRESH AUTOMÁTICO (ON_CHANGE)
+  tipo_actividad = st.selectbox(
+      "5. Seleccione el Tipo de Actividad",
+      [
+          "Falla",
+          "Ajuste de parámetros",
+          "Trabajo asignado",
+          "Cambio de molde",
+      ],
+      key="tipo_actividad_sel",
+  )
+
+  # AHORA EL FORMULARIO ENVÍA LOS DATOS SEGÚN LA OPCIÓN SELECCIONADA
+  with st.form("form_actividad_dinamico"):
     # VARIABLES POR DEFECTO
     maquina = "N/A"
     seccion = "N/A"
@@ -283,9 +286,9 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     repuesto = "N/A"
     observaciones = "N/A"
 
-    # CONDICIONAL ESTRICTO: EL REPORTE COMPLETO SOLO APARECE SI ES "Falla"
+    # CONDICIONAL ESTRICTO SEGÚN LA SELECCIÓN
     if tipo_actividad == "Falla":
-      st.info("Desplegando formulario completo de reporte de falla.")
+      st.subheader("📋 Formulario de Reporte de Falla")
       c3, c4 = st.columns(2)
       with c3:
         maquina = st.selectbox(
@@ -343,14 +346,38 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
       )
       observaciones = st.text_area("Observaciones")
 
-    else:
-      # SI NO ES "FALLA", NO SE DESPLIEGA NINGÚN FORMULARIO DE REPORTE
-      st.info(
-          f"Actividad seleccionada: **{tipo_actividad}**. El formulario de"
-          " reporte de falla permanece oculto."
+    elif tipo_actividad == "Ajuste de parámetros":
+      st.subheader("⚙️ Formulario de Ajuste de Parámetros")
+      maquina = st.selectbox(
+          "Máquina a Ajustar",
+          [
+              "Maquina 1",
+              "Maquina 6",
+              "Maquina 8",
+              "Maquina 9",
+              "Maquina 10",
+              "Maquina 11",
+              "Maquina 12",
+              "Maquina 13",
+          ],
       )
+      diagnostico = st.text_area("Detalle de los parámetros ajustados")
+      solucion = st.text_area("Resultado del ajuste")
 
-    enviar = st.form_submit_button("Enviar Reporte")
+    elif tipo_actividad == "Trabajo asignado":
+      st.subheader("📌 Formulario de Trabajo Asignado")
+      diagnostico = st.text_area("Descripción del trabajo asignado")
+      solucion = st.text_area("Estado final del trabajo")
+
+    elif tipo_actividad == "Cambio de molde":
+      st.subheader("🔄 Formulario de Cambio de Molde")
+      maquina = st.selectbox(
+          "Máquina", ["Maquina 1", "Maquina 6", "Maquina 8", "Maquina 9"]
+      )
+      diagnostico = st.text_area("Molde Retirado / Molde Instalado")
+      solucion = st.text_area("Observaciones del cambio de molde")
+
+    enviar = st.form_submit_button("Guardar Registro")
     if enviar:
       if tipo_actividad == "Falla" and not diagnostico:
         st.error("Por favor escriba el diagnóstico de la falla.")
@@ -379,8 +406,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             ignore_index=True,
         )
         st.success(
-            "¡Registro guardado con éxito en la sesión actual con la opción"
-            f" '{tipo_actividad}'!"
+            f"¡Registro guardado con éxito bajo la categoría '{tipo_actividad}'!"
         )
 
 # 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
