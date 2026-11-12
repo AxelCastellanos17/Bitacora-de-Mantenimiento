@@ -344,3 +344,11 @@ elif menu == "Panel de Administración":
           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           use_container_width=True,
       )
+
+  st.markdown("---")
+
+  if not df_all.empty:
+    st.subheader("📋 Historial de Reportes")
+    st.dataframe(df_all, use_container_width=True)
+  else:
+    st.warning("No hay registros disponibles para mostrar.")
