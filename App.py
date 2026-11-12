@@ -348,6 +348,29 @@ elif menu == "Panel de Administración":
   st.markdown("---")
 
   if not df_all.empty:
+    # GRÁFICA ESTADÍSTICA DE FALLAS POR MÁQUINA
+    st.subheader("📈 Análisis de Fallas por Máquina")
+    if "Maquina" in df_all.columns:
+      conteo_maquinas = df_all["Maquina"].value_counts().reset_index()
+      conteo_maquinas.columns = ["Maquina", "Total_Fallas"]
+
+      fig = go.Figure(
+          data=[
+              go.Bar(
+                  x=conteo_maquinas["Maquina"],
+                  y=conteo_maquinas["Total_Fallas"],
+                  marker_color="#1f77b4",
+              )
+          ]
+      )
+      fig.update_layout(
+          xaxis_title="Máquina",
+          yaxis_title="Cantidad de Fallas",
+          template="plotly_dark",
+      )
+      st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("---")
     st.subheader("📋 Historial de Reportes")
     st.dataframe(df_all, use_container_width=True)
   else:
