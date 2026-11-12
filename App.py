@@ -3,7 +3,6 @@ import io
 import os
 import pandas as pd
 import plotly.graph_objects as go
-import requests
 import streamlit as st
 
 st.set_page_config(
@@ -26,10 +25,7 @@ menu = st.sidebar.selectbox(
 
 # ENLACE CSV DE GOOGLE SHEETS
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
-
-# URL DE TU GOOGLE APPS SCRIPT
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyJKgLSeYOe3UOKBZ_4EWLZQzX4xMcK6sRHV_QokmjuVWxsmIBajGnlJ3kGpQm9NQq/exec"
-
 
 # FUNCIÓN PARA CALCULAR SEGUNDOS, MINUTOS Y HORAS DECIMALES
 def calcular_tiempo_falla(df):
@@ -125,25 +121,27 @@ def cargar_y_limpiar_datos(fuente):
 
     columnas_requeridas = [
         "Fecha",
+        "Departamento",
         "Turno",
-        "Maquina",
-        "Diagnostico",
-        "Accion_Realizada",
-        "Portamolde",
         "Quien_Reporta",
+        "Maquina",
         "Seccion_Maquina",
         "Campo_Trabajo",
-        "Acompanamiento",
-        "Requiere_Repuesto",
-        "Detalle_Repuesto",
+        "Diagnostico",
+        "Solucion",
+        "Repuesto",
         "Hora_Inicial",
         "Hora_Final",
         "Observaciones",
+        "Tiempo de Falla",
     ]
 
     for col in columnas_requeridas:
       if col not in df.columns:
-        df[col] = "N/A"
+        if col == "Tiempo de Falla":
+          df[col] = "00:00:00"
+        else:
+          df[col] = "N/A"
 
     df = calcular_tiempo_falla(df)
     return df
@@ -169,25 +167,94 @@ if "departamentos" not in st.session_state:
       "Administración",
   ]
 
+if "formatos_deptos_avanzado" not in st.session_state:
+  st.session_state["formatos_deptos_avanzado"] = {
+      "Departamento de Mantenimiento CH": [
+          {
+              "nombre": "Portamolde",
+              "tipo": "Desplegable",
+              "opciones": "Portalmolde 1, Portalmolde 2, N.A",
+          }
+      ],
+      "Moldes": [{"nombre": "Molde Afectado", "tipo": "Texto Corto", "opciones": ""}],
+      "Administración": [
+          {"nombre": "Costo Operativo", "tipo": "Texto Corto", "opciones": ""}
+      ],
+  }
+
 # 1. DISEÑADOR DE FORMATOS
 if menu == "Diseñador de Formatos por Departamento":
   st.header("🛠️ Diseñador y Gestión de Formatos")
-  st.info(
-      "Módulo activo para la gestión de campos personalizados por"
-      " departamento."
+  tab1, tab2, tab3 = st.tabs(
+      ["📋 Ver Formatos", "➕ Agregar Campo", "🏢 Crear Departamento"]
   )
+
+  with tab1:
+    depto_sel = st.selectbox(
+        "Selecciona el Departamento", st.session_state["departamentos"]
+    )
+    st.subheader(f"Estructura: {depto_sel}")
+    campos = st.session_state["formatos_deptos_avanzado"].get(depto_sel, [])
+    if campos:
+      for c in campos:
+        st.write(f"📌 {c['nombre']} ({c['tipo']})")
+    else:
+      st.info("Sin campos personalizados.")
+
+  with tab2:
+    d_ing = st.selectbox(
+        "Departamento para agregar", st.session_state["departamentos"]
+    )
+    n_campo = st.text_input("Nombre del Campo")
+    t_dato = st.selectbox(
+        "Tipo", ["Texto Corto", "Texto Largo", "Desplegable", "Fecha"]
+    )
+    ops = st.text_area("Opciones (si es desplegable, separadas por coma)")
+    if st.button("Guardar Campo"):
+      if n_campo:
+        st.session_state["formatos_deptos_avanzado"][d_ing].append(
+            {"nombre": n_campo, "tipo": t_dato, "opciones": ops}
+        )
+        st.success("¡Campo agregado!")
+        st.rerun()
+
+  with tab3:
+    nuevo_dep = st.text_input("Nombre del nuevo departamento")
+    if st.button("Crear Departamento"):
+      if nuevo_dep and nuevo_dep not in st.session_state["departamentos"]:
+        st.session_state["departamentos"].append(nuevo_dep)
+        st.session_state["formatos_deptos_avanzado"][nuevo_dep] = []
+        st.success(f"¡Departamento {nuevo_dep} creado!")
+        st.rerun()
 
 # 2. PANEL DE TÉCNICO
 elif menu == "Panel de Técnico (Reporte de Falla)":
   st.header("📝 Registro de Reporte de Fallas")
+  depto_activo = st.selectbox(
+      "Selecciona el Departamento", st.session_state["departamentos"]
+  )
 
   with st.form("form_falla"):
     c1, c2 = st.columns(2)
     with c1:
-      fecha = st.date_input("1. Fecha", value=datetime.today())
-      turno = st.selectbox("2. Turno", ["Turno Diurno", "Turno Nocturno"])
+      fecha = st.date_input("Fecha", value=datetime.today())
+      turno = st.selectbox("Turno", ["Turno Diurno", "Turno Nocturno"])
+      quien_reporta = st.selectbox(
+          "Quién Reporta",
+          [
+              "Carlos Castellanos",
+              "Axel Castellanos",
+              "Manuel Hernandez",
+              "Bayron Enamorado",
+              "Arnold Matute",
+              "Ismael Castellanos",
+              "Isaac Bejarano",
+              "Jonathan Alberto",
+              "Gabriel Rivas",
+          ],
+      )
       maquina = st.selectbox(
-          "3. Maquina",
+          "Máquina",
           [
               "Todas Las Maquinas",
               "Maquina 1",
@@ -204,115 +271,61 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
               "Molino 7G",
           ],
       )
-      diagnostico = st.text_area("4. Diagnostico")
-      accion_realizada = st.text_area("5. Acciones Realizadas")
-      portamolde = st.selectbox(
-          "6. Portamolde",
-          [
-              "Portalmolde 1",
-              "Portalmolde 2",
-              "Portalmolde 3",
-              "Portalmolde 4",
-              "Portalmolde 5",
-              "N. A",
-          ],
-      )
-      quien_reporta = st.selectbox(
-          "7. Quien Reporta",
-          [
-              "Carlos Castellanos",
-              "Axel Castellanos",
-              "Manuel Hernandez",
-              "Bayron Enamorado",
-              "Arnold Matute",
-              "Ismael Castellanos",
-              "Isaac Bejarano",
-              "Jonathan Alberto",
-              "Gabriel Rivas",
-          ],
-      )
     with c2:
       seccion = st.selectbox(
-          "8. Sección de Maquina",
-          [
-              "Inyector",
-              "Mesa",
-              "Central Hidraulica",
-              "Gabinete Electrico",
-              "Bloque de Prensado",
-              "N/A",
-          ],
+          "Sección",
+          ["Inyector", "Mesa", "Central Hidraulica", "Gabinete Electrico", "N/A"],
       )
       campo_t = st.selectbox(
-          "9. Campo de Trabajo",
+          "Campo de Trabajo",
           [
-              "Mantenimiento Preventivo",
-              "Corte de Energia",
               "Electrico",
               "Mecanico",
               "Hidraulico",
               "Refrigeración",
-              "Proceso",
+              "Procesos",
               "Neumatico",
-              "Problemas Con Vacio",
               "N/A",
           ],
       )
-      acompanamiento = st.selectbox(
-          "10. Acompañamiento",
-          [
-              "N/A",
-              "Carlos Castellanos",
-              "Axel Castellanos",
-              "Manuel Hernandez",
-              "Bayron Enamorado",
-              "Arnold Matute",
-          ],
-      )
-      requiere_repuesto = st.selectbox(
-          "11. Requiere repuestos o Insumo", ["No", "Si"]
-      )
-      detalle_repuesto = st.text_input(
-          "12. Si requiere repuesto especifique qué repuesto es"
-      )
-      h_ini = st.text_input("13. Hora inicial de Falla (Ej. 08:00 AM)")
-      h_fin = st.text_input("14. Hora Final de Falla (Ej. 09:30 AM)")
+      h_ini = st.text_input("Hora Inicial (Ej. 08:00 AM)")
+      h_fin = st.text_input("Hora Final (Ej. 09:30 AM)")
 
-    observaciones = st.text_area("15. Observaciones")
+    diagnostico = st.text_area("Diagnóstico de la falla")
+    solucion = st.text_area("Acciones realizadas / Solución")
+    repuesto = st.selectbox(
+        "Requiere Repuesto", ["N/A", "Fusible 6A", "Tornillo M10"]
+    )
+    observaciones = st.text_area("Observaciones")
 
     enviar = st.form_submit_button("Enviar Reporte")
     if enviar:
       if not diagnostico:
-        st.error("Por favor escriba el diagnóstico.")
+        st.error("Escribe el diagnóstico.")
       else:
-        datos_envio = {
+        nueva_fila = {
             "Fecha": str(fecha),
             "Turno": turno,
-            "Maquina": maquina,
-            "Diagnostico": diagnostico,
-            "Accion_Realizada": accion_realizada,
-            "Portamolde": portamolde,
+             "Maquina": maquina,
+             "Diagnostico": diagnostico,
+              "Solucion": solucion,
             "Quien_Reporta": quien_reporta,
             "Seccion_Maquina": seccion,
             "Campo_Trabajo": campo_t,
-            "Acompanamiento": acompanamiento,
-            "Requiere_Repuesto": requiere_repuesto,
-            "Detalle_Repuesto": detalle_repuesto,
+            "Acompañamiento": acompanamiento,
+            "Requiere Repuesto?": repuesto,
+            "Detalle_Repuesto": detalle_Repuesto,
             "Hora_Inicial": h_ini,
             "Hora_Final": h_fin,
             "Observaciones": observaciones,
         }
-
-        try:
-          response = requests.post(APPS_SCRIPT_URL, json=datos_envio)
-          if response.status_code == 200:
-            st.success(
-                "¡Reporte enviado y guardado exitosamente en Google Sheets!"
-            )
-          else:
-            st.warning("El reporte se procesó con advertencias.")
-        except Exception as ex:
-          st.error(f"Error al conectar con Google Sheets: {ex}")
+        df_nuevo = pd.DataFrame([nueva_fila])
+        df_nuevo = calcular_tiempo_falla(df_nuevo)
+        st.session_state["bitacora_general"] = pd.concat(
+            [st.session_state["bitacora_general"], df_nuevo],
+            ignore_index=True,
+        )
+        st.success("¡Reporte agregado con éxito a la sesión actual!")
 
 # 3. PANEL DE ADMINISTRACIÓN
 elif menu == "Panel de Administración":
@@ -321,6 +334,7 @@ elif menu == "Panel de Administración":
   df_all = st.session_state["bitacora_general"]
   total_reg = len(df_all)
 
+  # Barra superior compacta
   b1, b2, b3 = st.columns([2, 1, 1])
   with b1:
     st.caption(f"🟢 **Google Sheets:** {total_reg} registros sincronizados")
@@ -330,7 +344,7 @@ elif menu == "Panel de Administración":
         st.session_state["bitacora_general"] = cargar_y_limpiar_datos(
             GOOGLE_SHEET_CSV_URL
         )
-        st.success("¡Actualizado desde Google Sheets!")
+        st.success("¡Actualizado!")
         st.rerun()
   with b3:
     if not df_all.empty:
@@ -344,3 +358,285 @@ elif menu == "Panel de Administración":
           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           use_container_width=True,
       )
+
+  # ============================================================================
+  # PANEL DE FILTROS Y CONFIGURACIÓN (COMPACTO Y BLINDADO)
+  # ============================================================================
+  columnas_disponibles = (
+      list(df_all.columns)
+      if not df_all.empty
+      else [
+          "Semana",
+          "Fecha",
+          "Turno",
+          "Maquina",
+          "Quien_Reporta",
+          "Descripción de Falla",
+      ]
+  )
+
+  with st.expander("🎛️ Filtros y Configuración", expanded=True):
+    sc1, sc2, sc3 = st.columns(3)
+    with sc1:
+      col_filas = st.selectbox(
+          "Filas",
+          columnas_disponibles,
+          index=(
+              columnas_disponibles.index("Maquina")
+              if "Maquina" in columnas_disponibles
+              else 0
+          ),
+          label_visibility="collapsed",
+      )
+    with sc2:
+      col_columnas = st.selectbox(
+          "Columnas",
+          columnas_disponibles,
+          index=(
+              columnas_disponibles.index("Fecha")
+              if "Fecha" in columnas_disponibles
+              else 0
+          ),
+          label_visibility="collapsed",
+      )
+    with sc3:
+      opciones_valores = [
+          "Horas_Decimales",
+          "_Segundos_Totales",
+          "Minutos_Muertos",
+      ] + [
+          c
+          for c in columnas_disponibles
+          if c not in ["Horas_Decimales", "_Segundos_Totales", "Minutos_Muertos"]
+      ]
+      col_valor = st.selectbox(
+          "Valores", opciones_valores, index=0, label_visibility="collapsed"
+      )
+
+    # Preparar datos temporales seguros con columnas auxiliares garantizadas
+    df_temp_filtro = df_all.copy()
+    if not df_temp_filtro.empty and col_columnas in df_temp_filtro.columns:
+      df_temp_filtro["_dt_temp"] = pd.to_datetime(
+          df_temp_filtro[col_columnas], errors="coerce"
+      )
+      df_temp_filtro["_Anio"] = df_temp_filtro["_dt_temp"].dt.year.apply(
+          lambda x: str(int(x)) if pd.notna(x) and x >= 2000 else "(Sin fecha)"
+      )
+      df_temp_filtro["_Mes"] = (
+          df_temp_filtro["_dt_temp"]
+          .dt.strftime("%B")
+          .fillna("Mes no especificado")
+      )
+    else:
+      df_temp_filtro["_Anio"] = "(Sin fecha)"
+      df_temp_filtro["_Mes"] = "Mes no especificado"
+
+    fc1, fc2, fc3, fc4 = st.columns(4)
+
+    with fc1:
+      maquinas_disponibles = (
+          sorted(list(df_all[col_filas].dropna().astype(str).unique()))
+          if not df_all.empty and col_filas in df_all.columns
+          else []
+      )
+      maq_seleccionadas = st.multiselect(
+          "Máquinas",
+          options=maquinas_disponibles,
+          default=[],
+          placeholder="Todas las máquinas",
+      )
+
+    with fc2:
+      anios_disp = (
+          sorted(list(df_temp_filtro["_Anio"].dropna().astype(str).unique()))
+          if not df_temp_filtro.empty
+          else []
+      )
+      anio_elegido = st.selectbox(
+          "Año", options=["(Todos los años)"] + anios_disp, index=0
+      )
+
+      meses_seleccionados = []
+      dias_seleccionados = []
+      if anio_elegido != "(Todos los años)":
+        df_anio_filtrado = df_temp_filtro[
+            df_temp_filtro["_Anio"] == anio_elegido
+        ]
+        meses_disp = sorted(
+            list(df_anio_filtrado["_Mes"].dropna().astype(str).unique())
+        )
+        meses_seleccionados = st.multiselect(
+            "Mes(es)", options=meses_disp, default=[], placeholder="Todos"
+        )
+        if meses_seleccionados:
+          df_mes_filtrado = df_anio_filtrado[
+              df_anio_filtrado["_Mes"].isin(meses_seleccionados)
+          ]
+          dias_disp = sorted(
+              list(df_mes_filtrado[col_columnas].dropna().astype(str).unique())
+          )
+          dias_seleccionados = st.multiselect(
+              "Días", options=dias_disp, default=[], placeholder="Todos"
+          )
+
+    with fc3:
+      turno_opts = (
+          sorted(list(df_all["Turno"].dropna().astype(str).unique()))
+          if not df_all.empty and "Turno" in df_all.columns
+          else []
+      )
+      f_turno = st.selectbox(
+          "Turno", options=["(Todos)"] + turno_opts, index=0
+      )
+
+      reporta_opts = (
+          sorted(list(df_all["Quien_Reporta"].dropna().astype(str).unique()))
+          if not df_all.empty and "Quien_Reporta" in df_all.columns
+          else []
+      )
+      rep_seleccionados = st.multiselect(
+          "Quién Reporta",
+          options=reporta_opts,
+          default=[],
+          placeholder="Todos",
+      )
+
+    with fc4:
+      texto_busqueda = st.text_input(
+          "Búsqueda rápida", "", placeholder="Diagnóstico / Solución..."
+      )
+
+  # Aplicar filtros al DataFrame de forma completamente segura (evitando KeyError)
+  df_view = df_temp_filtro.copy() if not df_temp_filtro.empty else pd.DataFrame()
+  if not df_view.empty:
+    if maq_seleccionadas and col_filas in df_view.columns:
+      df_view = df_view[
+          df_view[col_filas].astype(str).isin(maq_seleccionadas)
+      ]
+
+    if dias_seleccionados and col_columnas in df_view.columns:
+      df_view = df_view[
+          df_view[col_columnas].astype(str).isin(dias_seleccionados)
+      ]
+    elif anio_elegido != "(Todos los años)":
+      df_view = df_view[df_view["_Anio"] == anio_elegido]
+      if meses_seleccionados:
+        df_view = df_view[df_view["_Mes"].isin(meses_seleccionados)]
+
+    if f_turno != "(Todos)" and "Turno" in df_view.columns:
+      df_view = df_view[df_view["Turno"].astype(str) == f_turno]
+
+    if rep_seleccionados and "Quien_Reporta" in df_view.columns:
+      df_view = df_view[
+          df_view["Quien_Reporta"].astype(str).isin(rep_seleccionados)
+      ]
+
+    if texto_busqueda:
+      mask = (
+          df_view.astype(str)
+          .apply(lambda x: x.str.contains(texto_busqueda, case=False, na=False))
+          .any(axis=1)
+      )
+      df_view = df_view[mask]
+
+  st.markdown("---")
+  st.subheader("📋 Matriz de Tiempo Reportado")
+
+  tabla_numerica = pd.DataFrame()
+  if (
+      not df_view.empty
+      and col_filas in df_view.columns
+      and col_columnas in df_view.columns
+      and col_valor in df_view.columns
+  ):
+    try:
+      # 1. Base numérica exacta
+      tabla_numerica = pd.pivot_table(
+          df_view,
+          index=col_filas,
+          columns=col_columnas,
+          values=col_valor,
+          aggfunc="sum",
+          fill_value=0,
+      )
+      tabla_numerica["Total General"] = tabla_numerica.sum(axis=1)
+      total_columna_num = pd.DataFrame(tabla_numerica.sum(axis=0)).T
+      total_columna_num.index = ["Total General"]
+      tabla_numerica = pd.concat([tabla_numerica, total_columna_num])
+
+      # 2. Convertimos los valores a formato [H]:mm:ss para la tabla visual
+      def convertir_a_hms_formato_excel(val):
+        if pd.isna(val) or val <= 0:
+          return "00:00:00"
+        segundos = val * 3600 if col_valor == "Horas_Decimales" else val
+        horas = int(segundos // 3600)
+        minutos = int((segundos % 3600) // 60)
+        segs = int(segundos % 60)
+        return f"{horas:02d}:{minutos:02d}:{segs:02d}"
+
+      tabla_formateada = tabla_numerica.map(convertir_a_hms_formato_excel)
+      st.dataframe(tabla_formateada, use_container_width=True)
+
+    except Exception as ex:
+      st.warning(f"No se pudo generar la tabla cruzada: {ex}")
+      st.dataframe(df_view, use_container_width=True)
+  else:
+    st.info("No hay datos que coincidan con los filtros seleccionados.")
+
+  st.markdown("---")
+  st.subheader("📈 Gráfica de Tiempo Reportado")
+
+  if not tabla_numerica.empty:
+    # 3. Preparamos la gráfica de barras apiladas directamente desde la matriz
+    df_grafica = tabla_numerica.drop(index=["Total General"], errors="ignore")
+    if "Total General" in df_grafica.columns:
+      df_grafica = df_grafica.drop(columns=["Total General"], errors="ignore")
+
+    if col_valor != "Horas_Decimales":
+      df_grafica = df_grafica / 3600
+
+    df_grafica = df_grafica.apply(pd.to_numeric, errors="coerce").fillna(0)
+
+    if not df_grafica.empty and df_grafica.sum().sum() > 0:
+      fig = go.Figure()
+
+      for fecha_col in df_grafica.columns:
+        valores_y = df_grafica[fecha_col]
+
+        textos_barra = []
+        for val in valores_y:
+          if val <= 0:
+            textos_barra.append("")
+          else:
+            total_segs = int(val * 3600)
+            h = total_segs // 3600
+            m = (total_segs % 3600) // 60
+            s = total_segs % 60
+            textos_barra.append(f"{h:02d}:{m:02d}:{s:02d}")
+
+        fig.add_trace(
+            go.Bar(
+                x=df_grafica.index.astype(str),
+                y=valores_y,
+                name=str(fecha_col),
+                text=textos_barra,
+                textposition="inside",
+                insidetextanchor="middle",
+                textfont=dict(color="black"),
+            )
+        )
+
+      fig.update_layout(
+          barmode="stack",
+          xaxis_title=col_filas,
+          yaxis_title="Horas Equivalentes",
+          legend_title="Fecha",
+          plot_bgcolor="rgba(0,0,0,0)",
+          paper_bgcolor="rgba(0,0,0,0)",
+      )
+
+      st.plotly_chart(fig, use_container_width=True)
+    else:
+      st.info("Sin datos numéricos suficientes para graficar.")
+  else:
+    st.info("Sin datos para mostrar en la gráfica.")
