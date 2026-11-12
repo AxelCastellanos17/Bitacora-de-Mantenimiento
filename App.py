@@ -230,7 +230,7 @@ if menu == "Diseñador de Formatos por Departamento":
         st.success(f"¡Departamento {nuevo_dep} creado!")
         st.rerun()
 
-# 2. PANEL DE TÉCNICO (NUEVA ESTRUCTURA DINÁMICA)
+# 2. PANEL DE TÉCNICO (FORMULARIO DINÁMICO)
 elif menu == "Panel de Técnico (Reporte de Falla)":
   st.header("📝 Registro de Reporte de Mantenimiento")
 
@@ -272,7 +272,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
         ],
     )
 
-    # CAMPOS CONDICIONALES SEGÚN LA OPCIÓN SELECCIONADA
+    # VARIABLES POR DEFECTO
     maquina = "N/A"
     seccion = "N/A"
     campo_t = "N/A"
@@ -283,6 +283,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     repuesto = "N/A"
     observaciones = "N/A"
 
+    # CONDICIONAL: EL FORMULARIO VIEJO COMPLETO SOLO SE MUESTRA EN "Falla"
     if tipo_actividad == "Falla":
       st.info(
           "Desplegando formulario completo de reporte de falla y tiempos"
@@ -309,12 +310,13 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             ],
         )
         seccion = st.selectbox(
-            "Sección",
+            "Sección de Máquina",
             [
                 "Inyector",
                 "Mesa",
                 "Central Hidraulica",
                 "Gabinete Electrico",
+                "Bloque de Prensado",
                 "N/A",
             ],
         )
@@ -322,22 +324,25 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
         campo_t = st.selectbox(
             "Campo de Trabajo",
             [
+                "Mantenimiento Preventivo",
+                "Corte de Energia",
                 "Electrico",
                 "Mecanico",
                 "Hidraulico",
                 "Refrigeración",
-                "Procesos",
+                "Proceso",
                 "Neumatico",
+                "Problemas Con Vacio",
                 "N/A",
             ],
         )
-        h_ini = st.text_input("Hora Inicial (Ej. 08:00 AM)")
-        h_fin = st.text_input("Hora Final (Ej. 09:30 AM)")
+        h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
+        h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
       diagnostico = st.text_area("Diagnóstico de la falla")
-      solucion = st.text_area("Acciones realizadas / Solución")
+      solucion = st.text_area("Acciones Realizadas / Solución")
       repuesto = st.selectbox(
-          "Requiere Repuesto", ["N/A", "Fusible 6A", "Tornillo M10"]
+          "Requiere Repuestos o Insumo", ["No", "Si", "Fusible 6A", "Tornillo M10"]
       )
       observaciones = st.text_area("Observaciones")
 
@@ -372,7 +377,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     enviar = st.form_submit_button("Enviar Reporte")
     if enviar:
       if tipo_actividad == "Falla" and not diagnostico:
-        st.error("Por favor escribe el diagnóstico de la falla.")
+        st.error("Por favor escriba el diagnóstico de la falla.")
       else:
         nueva_fila = {
             "Fecha": str(fecha),
@@ -398,11 +403,11 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             ignore_index=True,
         )
         st.success(
-            "¡Registro guardado con éxito en la sesión actual con la nueva"
-            " estructura!"
+            "¡Registro guardado con éxito en la sesión actual con el formulario"
+            " de falla!"
         )
 
-# 3. PANEL DE ADMINISTRACIÓN (MANTIENE SUS FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
+# 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control")
 
