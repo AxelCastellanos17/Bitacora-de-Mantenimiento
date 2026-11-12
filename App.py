@@ -283,12 +283,9 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     repuesto = "N/A"
     observaciones = "N/A"
 
-    # CONDICIONAL: EL FORMULARIO VIEJO COMPLETO SOLO SE MUESTRA EN "Falla"
+    # CONDICIONAL: EL FORMULARIO COMPLETO SOLO SE MUESTRA EN "Falla"
     if tipo_actividad == "Falla":
-      st.info(
-          "Desplegando formulario completo de reporte de falla y tiempos"
-          " muertos."
-      )
+      st.info("Desplegando formulario completo de reporte de falla.")
       c3, c4 = st.columns(2)
       with c3:
         maquina = st.selectbox(
@@ -346,33 +343,13 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
       )
       observaciones = st.text_area("Observaciones")
 
-    elif tipo_actividad == "Ajuste de parámetros":
-      maquina = st.selectbox(
-          "Máquina a Ajustar",
-          [
-              "Maquina 1",
-              "Maquina 6",
-              "Maquina 8",
-              "Maquina 9",
-              "Maquina 10",
-              "Maquina 11",
-              "Maquina 12",
-              "Maquina 13",
-          ],
+    else:
+      # PARA LAS DEMÁS OPCIONES EL FORMULARIO QUEDA VACÍO / LIMPIO
+      st.info(
+          f"Actividad seleccionada: **{tipo_actividad}**. Formulario limpio"
+          " listo para registro general."
       )
-      diagnostico = st.text_area("Detalle de los parámetros ajustados")
-      solucion = st.text_area("Resultado del ajuste")
-
-    elif tipo_actividad == "Trabajo asignado":
-      diagnostico = st.text_area("Descripción del trabajo asignado")
-      solucion = st.text_area("Estado final del trabajo")
-
-    elif tipo_actividad == "Cambio de molde":
-      maquina = st.selectbox(
-          "Máquina", ["Maquina 1", "Maquina 6", "Maquina 8", "Maquina 9"]
-      )
-      diagnostico = st.text_area("Molde Retirado / Molde Instalado")
-      solucion = st.text_area("Observaciones del cambio de molde")
+      observaciones = st.text_area("Observaciones / Detalles de la actividad")
 
     enviar = st.form_submit_button("Enviar Reporte")
     if enviar:
@@ -403,8 +380,8 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
             ignore_index=True,
         )
         st.success(
-            "¡Registro guardado con éxito en la sesión actual con el formulario"
-            " de falla!"
+            "¡Registro guardado con éxito en la sesión actual con la opción"
+            f" '{tipo_actividad}'!"
         )
 
 # 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
