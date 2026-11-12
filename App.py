@@ -348,10 +348,45 @@ elif menu == "Panel de Administración":
   st.markdown("---")
 
   if not df_all.empty:
-    # GRÁFICA ESTADÍSTICA DE FALLAS POR MÁQUINA
-    st.subheader("📈 Análisis de Fallas por Máquina")
-    if "Maquina" in df_all.columns:
-      conteo_maquinas = df_all["Maquina"].value_counts().reset_index()
+    # FILTROS AVANZADOS DE BÚSQUEDA
+    st.subheader("🔍 Filtros de Búsqueda")
+    f1, f2, f3 = st.columns(3)
+
+    with f1:
+      maquinas_disponibles = ["Todas"] + sorted(
+          df_all["Maquina"].dropna().unique().tolist()
+      )
+      maquina_filtro = st.selectbox("Filtrar por Máquina", maquinas_disponibles)
+
+    with f2:
+      turnos_disponibles = ["Todos"] + sorted(
+          df_all["Turno"].dropna().unique().tolist()
+      )
+      turno_filtro = st.selectbox("Filtrar por Turno", turnos_disponibles)
+
+    with f3:
+      tecnicos_disponibles = ["Todos"] + sorted(
+          df_all["Quien_Reporta"].dropna().unique().tolist()
+      )
+      tecnico_filtro = st.selectbox("Filtrar por Técnico", tecnicos_disponibles)
+
+    # APLICAR FILTROS AL DATAFRAME
+    df_filtrado = df_all.copy()
+    if maquina_filtro != "Todas":
+      df_filtrado = df_filtrado[df_filtrado["Maquina"] == maquina_filtro]
+    if turno_filtro != "Todos":
+      df_filtrado = df_filtrado[df_filtrado["Turno"] == turno_filtro]
+    if tecnico_filtro != "Todos":
+      df_filtrado = df_filtrado[
+          df_filtrado["Quien_Reporta"] == tecnico_filtro
+      ]
+
+    st.markdown("---")
+
+    # GRÁFICA ESTADÍSTICA DE FALLAS (BASADA EN EL FILTRO)
+    st.subheader("📈 Análisis de Fallas")
+    if "Maquina" in df_filtrado.columns and not df_filtrado.empty:
+      conteo_maquinas = df_filtrado["Maquina"].value_counts().reset_index()
       conteo_maquinas.columns = ["Maquina", "Total_Fallas"]
 
       fig = go.Figure(
@@ -371,7 +406,10 @@ elif menu == "Panel de Administración":
       st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
-    st.subheader("📋 Historial de Reportes")
-    st.dataframe(df_all, use_container_width=True)
+    st.subheader(
+        f"📋 Historial de Reportes Filtrados ({len(df_filtrado)} registros)"
+    )
+    st.dataframe(df_filtrado, use_container_width=True)
   else:
     st.warning("No hay registros disponibles para mostrar.")
+      
