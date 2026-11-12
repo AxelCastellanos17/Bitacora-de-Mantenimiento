@@ -15,12 +15,16 @@ st.set_page_config(
 st.title("🔧 Sistema Integral de Reportes C.H/7G")
 st.markdown("---")
 
+# MÓDULOS DEL SISTEMA (DEPARTAMENTOS Y GESTIÓN COMO MÓDULOS)
 menu = st.sidebar.selectbox(
     "Selecciona el Módulo",
     [
         "Panel de Técnico (Reporte de Falla)",
         "Panel de Administración",
         "Diseñador de Formatos por Departamento",
+        "Departamento de Mantenimiento CH",
+        "Taller de Moldes",
+        "Administración",
     ],
 )
 
@@ -166,7 +170,7 @@ if "bitacora_general" not in st.session_state:
 if "departamentos" not in st.session_state:
   st.session_state["departamentos"] = [
       "Departamento de Mantenimiento CH",
-      "Moldes",
+      "Taller de Moldes",
       "Administración",
   ]
 
@@ -179,7 +183,9 @@ if "formatos_deptos_avanzado" not in st.session_state:
               "opciones": "Portalmolde 1, Portalmolde 2, N.A",
           }
       ],
-      "Moldes": [{"nombre": "Molde Afectado", "tipo": "Texto Corto", "opciones": ""}],
+      "Taller de Moldes": [
+          {"nombre": "Molde Afectado", "tipo": "Texto Corto", "opciones": ""}
+      ],
       "Administración": [
           {"nombre": "Costo Operativo", "tipo": "Texto Corto", "opciones": ""}
       ],
@@ -230,22 +236,37 @@ if menu == "Diseñador de Formatos por Departamento":
         st.success(f"¡Departamento {nuevo_dep} creado!")
         st.rerun()
 
-# 2. PANEL DE TÉCNICO (FORMULARIO DINÁMICO CON REACTIVIDAD ESTRICTA)
+# VISTAS ESPECIALES PARA LOS MÓDULOS DE DEPARTAMENTOS / TALLER DE MOLDES
+elif menu in [
+    "Departamento de Mantenimiento CH",
+    "Taller de Moldes",
+    "Administración",
+]:
+  st.header(f"🏢 Módulo: {menu}")
+  st.info(
+      f"Bienvenido al espacio de trabajo del {menu}. Aquí podrás gestionar los"
+      " registros y formatos específicos de esta área."
+  )
+  # Mostrar formato asociado si existe
+  campos_depto = st.session_state["formatos_deptos_avanzado"].get(menu, [])
+  if campos_depto:
+    st.subheader("Campos y Formatos Configurados:")
+    for c in campos_depto:
+      st.write(f"🔹 **{c['nombre']}** (Tipo: {c['tipo']})")
+  else:
+    st.info("No hay campos adicionales configurados para este módulo.")
+
+# 2. PANEL DE TÉCNICO (REGISTRO SIN SELECTOR DE DEPARTAMENTO INTERNO)
 elif menu == "Panel de Técnico (Reporte de Falla)":
   st.header("📝 Registro de Reporte de Mantenimiento")
 
-  # CAMPOS FIJOS INICIALES FUERA DEL FORMULARIO PARA DETECTAR EL CAMBIO AL INSTANTE
-  depto_activo = st.selectbox(
-      "1. Selecciona el Departamento", st.session_state["departamentos"]
-  )
-
   c1, c2 = st.columns(2)
   with c1:
-    fecha = st.date_input("2. Fecha", value=datetime.today())
-    turno = st.selectbox("3. Turno", ["Turno Diurno", "Turno Nocturno"])
+    fecha = st.date_input("1. Fecha", value=datetime.today())
+    turno = st.selectbox("2. Turno", ["Turno Diurno", "Turno Nocturno"])
   with c2:
     quien_reporta = st.selectbox(
-        "4. Quién Reporta",
+        "3. Quién Reporta",
         [
             "Carlos Castellanos",
             "Axel Castellanos",
@@ -261,9 +282,9 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
 
   st.markdown("---")
 
-  # SELECTOR MAESTRO CON REFRESH AUTOMÁTICO (ON_CHANGE)
+  # SELECTOR MAESTRO DE TIPO DE ACTIVIDAD
   tipo_actividad = st.selectbox(
-      "5. Seleccione el Tipo de Actividad",
+      "4. Seleccione el Tipo de Actividad",
       [
           "Falla",
           "Ajuste de parámetros",
@@ -273,9 +294,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
       key="tipo_actividad_sel",
   )
 
-  # AHORA EL FORMULARIO ENVÍA LOS DATOS SEGÚN LA OPCIÓN SELECCIONADA
   with st.form("form_actividad_dinamico"):
-    # VARIABLES POR DEFECTO
     maquina = "N/A"
     seccion = "N/A"
     campo_t = "N/A"
@@ -286,7 +305,6 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     repuesto = "N/A"
     observaciones = "N/A"
 
-    # CONDICIONAL ESTRICTO SEGÚN LA SELECCIÓN
     if tipo_actividad == "Falla":
       st.subheader("📋 Formulario de Reporte de Falla")
       c3, c4 = st.columns(2)
@@ -384,7 +402,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
       else:
         nueva_fila = {
             "Fecha": str(fecha),
-            "Departamento": depto_activo,
+            "Departamento": "General",
             "Turno": turno,
             "Quien_Reporta": quien_reporta,
             "Tipo_Actividad": tipo_actividad,
