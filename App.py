@@ -230,7 +230,7 @@ if menu == "Diseñador de Formatos por Departamento":
         st.success(f"¡Departamento {nuevo_dep} creado!")
         st.rerun()
 
-# 2. PANEL DE TÉCNICO (FORMULARIO DINÁMICO)
+# 2. PANEL DE TÉCNICO (FORMULARIO DINÁMICO ESTRICTO)
 elif menu == "Panel de Técnico (Reporte de Falla)":
   st.header("📝 Registro de Reporte de Mantenimiento")
 
@@ -283,7 +283,7 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
     repuesto = "N/A"
     observaciones = "N/A"
 
-    # CONDICIONAL: EL FORMULARIO COMPLETO SOLO SE MUESTRA EN "Falla"
+    # CONDICIONAL ESTRICTO: EL REPORTE COMPLETO SOLO APARECE SI ES "Falla"
     if tipo_actividad == "Falla":
       st.info("Desplegando formulario completo de reporte de falla.")
       c3, c4 = st.columns(2)
@@ -344,12 +344,11 @@ elif menu == "Panel de Técnico (Reporte de Falla)":
       observaciones = st.text_area("Observaciones")
 
     else:
-      # PARA LAS DEMÁS OPCIONES EL FORMULARIO QUEDA VACÍO / LIMPIO
+      # SI NO ES "FALLA", NO SE DESPLIEGA NINGÚN FORMULARIO DE REPORTE
       st.info(
-          f"Actividad seleccionada: **{tipo_actividad}**. Formulario limpio"
-          " listo para registro general."
+          f"Actividad seleccionada: **{tipo_actividad}**. El formulario de"
+          " reporte de falla permanece oculto."
       )
-      observaciones = st.text_area("Observaciones / Detalles de la actividad")
 
     enviar = st.form_submit_button("Enviar Reporte")
     if enviar:
