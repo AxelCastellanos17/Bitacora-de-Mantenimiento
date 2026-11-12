@@ -15,7 +15,7 @@ st.set_page_config(
 st.title("🔧 Sistema Integral de Reportes C.H/7G")
 st.markdown("---")
 
-# MÓDULOS DEL SISTEMA (DEPARTAMENTOS Y GESTIÓN COMO MÓDULOS)
+# MÓDULOS DEL SISTEMA
 menu = st.sidebar.selectbox(
     "Selecciona el Módulo",
     [
@@ -191,7 +191,7 @@ if "formatos_deptos_avanzado" not in st.session_state:
   }
 
 # 1. DISEÑADOR DE FORMATOS
-if menu == "Diseñador de Formatos por Departamento":
+if menu == "Diseño":
   st.header("🛠️ Diseñador y Gestión de Formatos")
   tab1, tab2, tab3 = st.tabs(
       ["📋 Ver Formatos", "➕ Agregar Campo", "🏢 Crear Departamento"]
@@ -235,18 +235,13 @@ if menu == "Diseñador de Formatos por Departamento":
         st.success(f"¡Departamento {nuevo_dep} creado!")
         st.rerun()
 
-# VISTAS ESPECIALES PARA LOS MÓDULOS DE DEPARTAMENTOS / TALLER DE MOLDES
-elif menu in [
-    "Departamento de Mantenimiento CH",
-    "Taller de Moldes",
-    "Administración",
-]:
+# MÓDULOS ESPECIALES
+elif menu in ["Taller de Moldes", "Gerencia"]:
   st.header(f"🏢 Módulo: {menu}")
   st.info(
       f"Bienvenido al espacio de trabajo del {menu}. Aquí podrás gestionar los"
       " registros y formatos específicos de esta área."
   )
-  # Mostrar formato asociado si existe
   campos_depto = st.session_state["formatos_deptos_avanzado"].get(menu, [])
   if campos_depto:
     st.subheader("Campos y Formatos Configurados:")
@@ -255,8 +250,8 @@ elif menu in [
   else:
     st.info("No hay campos adicionales configurados para este módulo.")
 
-# 2. PANEL DE TÉCNICO (REGISTRO SIN SELECTOR DE DEPARTAMENTO INTERNO)
-elif menu == "Panel de Técnico (Reporte de Falla)":
+# 2. PANEL DE TÉCNICO (REGISTRO DINÁMICO)
+elif menu == "Panel de Técnico":
   st.header("📝 Registro de Reporte de Mantenimiento")
 
   c1, c2 = st.columns(2)
