@@ -351,7 +351,7 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # ESTRUCTURA DE MUÑECAS RUSAS (JERARQUÍA DINÁMICA)
+      # ESTRUCTURA DE MUÑECAS RUSAS (JERARQUÍA DINÁMICA CORREGIDA)
       st.markdown("---")
       st.write("🔧 **Diagnóstico y Selección en Cascada:**")
 
@@ -395,10 +395,12 @@ elif menu == "Panel de Técnico":
       )
 
       sub_opciones = arbol_fallas.get(cat_principal, ["N/A"])
+      
+      # Clave y etiqueta dinámicas para limpiar caché de Streamlit al cambiar de área
       sub_detalle = st.selectbox(
           f"Selecciona el detalle para: {cat_principal}",
           sub_opciones,
-          key=f"sub_detalle_{cat_principal}",
+          key=f"detalle_{cat_principal}",
       )
 
       diagnostico = f"{cat_principal} -> {sub_detalle}"
