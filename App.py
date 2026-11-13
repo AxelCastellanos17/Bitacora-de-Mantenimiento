@@ -299,6 +299,8 @@ elif menu == "Panel de Técnico":
     solucion = "N/A"
     repuesto = "N/A"
     observaciones = "N/A"
+    cat_principal = "N/A"
+    sub_detalle = "N/A"
 
     if tipo_actividad == "Falla":
       st.subheader("📋 Formulario de Reporte de Falla")
@@ -352,13 +354,13 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # ESTRUCTURA DE MUÑECAS RUSAS DENTRO DEL FORMULARIO CON ESTADO LIMPIO
+      # ESTRUCTURA DE MUÑECAS RUSAS DENTRO DEL FORMULARIO CON DICCIONARIO DIRECTO
       st.markdown("---")
       st.write("🔧 **Diagnóstico y Selección en Cascada:**")
 
       arbol_fallas = {
-          "-- Seleccione un Área Principal --": [
-              "-- Seleccione primero un área --"
+          "Seleccione un área principal...": [
+              "Seleccione primero un área..."
           ],
           "Problema Electrico": [
               "Corto circuito",
@@ -398,12 +400,12 @@ elif menu == "Panel de Técnico":
           key="cat_principal_rusia",
       )
 
-      # Determinamos las opciones secundarias de forma inmediata según la selección actual
+      # Obtenemos las sub-opciones basándonos estrictamente en la selección actual
       sub_opciones = arbol_fallas.get(
-          cat_principal, ["-- Seleccione primero un área --"]
+          cat_principal, ["Seleccione primero un área..."]
       )
       sub_detalle = st.selectbox(
-          f"Selecciona el detalle para: {cat_principal}",
+          "Selecciona el detalle",
           sub_opciones,
           key="sub_detalle_rusia",
       )
@@ -452,9 +454,9 @@ elif menu == "Panel de Técnico":
 
     enviar = st.form_submit_button("Guardar Registro")
     if enviar:
-      if tipo_actividad == "Falla" and (
-          cat_principal == "-- Seleccione un Área Principal --"
-          or sub_detalle == "-- Seleccione primero un área --"
+      if (
+          tipo_actividad == "Falla"
+          and cat_principal == "Seleccione un área principal..."
       ):
         st.error(
             "Por favor seleccione una categoría y un detalle de falla válido."
