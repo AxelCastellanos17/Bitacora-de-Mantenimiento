@@ -73,6 +73,7 @@ def cargar_y_limpiar_datos(fuente):
 
     df.columns = df.columns.astype(str).str.strip()
 
+    # Mapeo exacto para capturar "Diagnostico o trabajo asignado"
     mapa_columnas = {
         "maquina": "Maquina",
         "máquina": "Maquina",
@@ -217,14 +218,14 @@ with st.sidebar:
         fecha_str = str(row.get("Fecha", "N/A"))
         maq_str = str(row.get("Maquina", "N/A"))
 
-        # Extraemos y validamos el diagnóstico
+        # Extraemos limpiamente el Diagnostico o trabajo asignado
         diag_val = str(row.get("Diagnostico", "N/A")).strip()
         if diag_val in ["", "nan", "None", "N/A"]:
           tipo_act = str(row.get("Tipo_Actividad", "")).strip()
           if tipo_act and tipo_act not in ["", "nan", "None", "N/A"]:
             diag_val = tipo_act
           else:
-            diag_val = "Mantenimiento General"
+            diag_val = "Sin diagnóstico registrado"
 
         st.markdown(
             f"🔹 **{fecha_str}** | *{maq_str}*  \n📝 {diag_val[:45]}"
@@ -370,7 +371,7 @@ elif menu == "Panel de Técnico":
 
   # 5. Diagnostico (Con Cascada Interactiva en Pantalla Dinámica)
   st.markdown("---")
-  st.subheader("5. Diagnostico")
+  st.subheader("5. Diagnostico o trabajo asignado")
   if tipo_actividad == "Falla":
     arbol_fallas = {
         "Problema Electrico": [
