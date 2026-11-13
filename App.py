@@ -351,7 +351,7 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # DIAGNÓSTICO PRINCIPAL Y SUB-OPCIONES DINÁMICAS
+      # MENÚ DESPLEGABLE DINÁMICO DE DIAGNÓSTICO Y SUB-OPCIONES
       st.markdown("---")
       st.write("🔧 **Diagnóstico / Tipo de Falla:**")
 
@@ -364,15 +364,15 @@ elif menu == "Panel de Técnico":
           "Proceso",
       ]
 
-      cat_principal = st.radio(
+      cat_principal = st.selectbox(
           "Seleccione el tipo de problema:",
           opciones_falla,
-          horizontal=True,
-          label_visibility="collapsed",
+          key="cat_principal_select",
       )
 
-      # SUB-OPCIONES DEPENDIENDO DE LA CATEGORÍA SELECCIONADA
-      sub_detalle = ""
+      # SUB-OPCIONES DESPLEGABLES EXCLUSIVAS
+      sub_detalle = "N/A"
+
       if cat_principal == "Problema Electrico":
         sub_detalle = st.selectbox(
             "Detalle de Falla Eléctrica",
@@ -383,6 +383,7 @@ elif menu == "Panel de Técnico":
                 "MicroSwitchs Dañado",
                 "Sensor Dañado",
             ],
+            key="sub_elec_sel",
         )
       elif cat_principal == "Problema Hidraulico":
         sub_detalle = st.selectbox(
@@ -393,26 +394,30 @@ elif menu == "Panel de Técnico":
                 "sellos dañado",
                 "bomba dañada",
             ],
+            key="sub_hid_sel",
         )
       elif cat_principal == "Problema con la Refrigeracion":
         sub_detalle = st.selectbox(
             "Detalle de Falla de Refrigeración",
             ["Chiller con problemas", "fuga de agua", "valvula dañada"],
+            key="sub_ref_sel",
         )
       elif cat_principal == "Proceso":
         sub_detalle = st.selectbox(
             "Detalle de Proceso",
             ["Burbuja de aire en bota", "Rayado", "Bota incompleta"],
+            key="sub_proc_sel",
         )
       elif cat_principal == "Problema mecanico":
         sub_detalle = st.selectbox(
             "Detalle de Falla Mecánica",
             ["Guia de compuerta dañada", "cuña de eje dañada"],
+            key="sub_mec_sel",
         )
       else:
         sub_detalle = "N/A"
 
-      # Consolidar diagnóstico final con categoría y sub-detalle
+      # Consolidar diagnóstico final con categoría y su sub-detalle exclusivo
       diagnostico = f"{cat_principal} -> {sub_detalle}"
 
       solucion = st.text_area("Acciones Realizadas / Solución")
@@ -783,7 +788,7 @@ elif menu == "Panel de Administración":
           paper_bgcolor="rgba(0,0,0,0)",
       )
 
-      st.plotly_chart(fig, use_container_width+True)
+      st.plotly_chart(fig, use_container_width=True)
     else:
       st.info("Sin datos numéricos suficientes para graficar.")
   else:
