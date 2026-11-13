@@ -377,9 +377,7 @@ elif menu == "Panel de Técnico":
     
          
     
-      sel_col5 = r2c2.radio(
-          "Fila 5", opciones_falla[4:5], label_visibility="collapsed"
-      )
+    
       sel_col6 = r2c3.radio(
           "Fila 6", opciones_falla[5:6], label_visibility="collapsed"
       )
