@@ -276,7 +276,7 @@ elif menu == "Panel de Técnico":
 
   st.markdown("---")
 
-  # SELECTOR MAESTRO DE TIPO DE ACTIVIDAD FUERA PARA CONTROLAR EL FLUJO
+  # SELECTOR MAESTRO DE TIPO DE ACTIVIDAD
   tipo_actividad = st.selectbox(
       "4. Seleccione el Tipo de Actividad",
       [
@@ -352,7 +352,7 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # ESTRUCTURA DE MUÑECAS RUSAS DENTRO DEL FORMULARIO
+      # ESTRUCTURA DE MUÑECAS RUSAS DENTRO DEL FORMULARIO CON ESTADO LIMPIO
       st.markdown("---")
       st.write("🔧 **Diagnóstico y Selección en Cascada:**")
 
@@ -398,11 +398,14 @@ elif menu == "Panel de Técnico":
           key="cat_principal_rusia",
       )
 
-      sub_opciones = arbol_fallas.get(cat_principal, ["N/A"])
+      # Determinamos las opciones secundarias de forma inmediata según la selección actual
+      sub_opciones = arbol_fallas.get(
+          cat_principal, ["-- Seleccione primero un área --"]
+      )
       sub_detalle = st.selectbox(
           f"Selecciona el detalle para: {cat_principal}",
           sub_opciones,
-          key=f"detalle_{cat_principal}",
+          key="sub_detalle_rusia",
       )
 
       diagnostico = f"{cat_principal} -> {sub_detalle}"
