@@ -67,7 +67,7 @@ def cargar_y_limpiar_datos(fuente):
 
     df.columns = df.columns.astype(str).str.strip()
 
-    # Mapeo exacto para capturar los nombres de las columnas del formulario
+    # Mapeo exacto para capturar los nombres de las columnas
     mapa_columnas = {
         "maquina": "Maquina",
         "máquina": "Maquina",
@@ -220,18 +220,24 @@ with st.sidebar:
         fecha_str = str(row.get("Fecha", "N/A"))
         maq_str = str(row.get("Maquina", "N/A"))
 
-        # Extracción exacta de la columna del Google Sheet
-        diag_val = str(
-            row.get("Diagnostico o trabajo asignado", "")
-        ).strip()
-        if diag_val in ["", "nan", "None", "N/A"]:
-          diag_val = str(row.get("Diagnostico", "")).strip()
-        if diag_val in ["", "nan", "None", "N/A"]:
+        # Búsqueda unificada y flexible de cualquier variante de diagnóstico
+        diag_val = "N/A"
+        for col_candidata in [
+            "Diagnostico o trabajo asignado",
+            "Diagnostico",
+            "Diagnóstico",
+        ]:
+          val = str(row.get(col_candidata, "")).strip()
+          if val and val not in ["", "nan", "None", "N/A"]:
+            diag_val = val
+            break
+
+        if diag_val == "N/A":
           tipo_act = str(row.get("Tipo_Actividad", "")).strip()
           diag_val = (
               tipo_act
               if tipo_act and tipo_act not in ["", "nan", "None", "N/A"]
-              else "Sin diagnóstico registrado"
+              else "Mantenimiento General"
           )
 
         st.markdown(
