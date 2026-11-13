@@ -288,7 +288,62 @@ elif menu == "Panel de Técnico":
       key="tipo_actividad_sel",
   )
 
-  # FORMULARIO ÚNICO QUE CONTIENE TODO ADENTRO
+  # ----------------------------------------------------
+  # SELECCIÓN EN CASCADA (FUERA DEL FORMULARIO)
+  # ----------------------------------------------------
+  cat_principal = "N/A"
+  sub_detalle = "N/A"
+
+  if tipo_actividad == "Falla":
+    st.markdown("---")
+    st.write("🔧 **Diagnóstico y Selección en Cascada:**")
+
+    arbol_fallas = {
+        "Problema Electrico": [
+            "Corto circuito",
+            "Relee dañado",
+            "Falso En señal",
+            "MicroSwitchs Dañado",
+            "Sensor Dañado",
+        ],
+        "Problema Hidraulico": [
+            "Fuga de Aceite",
+            "Electrovalvula dañada",
+            "Sellos dañado",
+            "Bomba dañada",
+        ],
+        "Problema Mecanico": [
+            "Guia de compuerta dañada",
+            "Cuña de eje dañada",
+        ],
+        "Problema con la Refrigeracion": [
+            "Chiller con problemas",
+            "Fuga de agua",
+            "Valvula dañada",
+        ],
+        "Proceso": [
+            "Burbuja de aire en bota",
+            "Rayado",
+            "Bota incompleta",
+        ],
+        "Problema Neumatico": [
+            "N/A",
+        ],
+    }
+
+    cat_principal = st.selectbox(
+        "Selecciona el Área Principal",
+        list(arbol_fallas.keys()),
+        key="cat_principal_rusia",
+    )
+
+    sub_opciones = arbol_fallas.get(cat_principal, ["N/A"])
+    sub_detalle = st.selectbox(
+        f"Selecciona el detalle para: {cat_principal}",
+        sub_opciones,
+        key=f"sub_detalle_{cat_principal}",
+    )
+
   with st.form("form_actividad_dinamico"):
     maquina = "N/A"
     seccion = "N/A"
@@ -299,8 +354,6 @@ elif menu == "Panel de Técnico":
     solucion = "N/A"
     repuesto = "N/A"
     observaciones = "N/A"
-    cat_principal = "N/A"
-    sub_detalle = "N/A"
 
     if tipo_actividad == "Falla":
       st.subheader("📋 Formulario de Reporte de Falla")
@@ -354,64 +407,10 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # ESTRUCTURA DE MUÑECAS RUSAS DENTRO DEL FORMULARIO CON SESSION STATE
-      st.markdown("---")
-      st.write("🔧 **Diagnóstico y Selección en Cascada:**")
-
-      arbol_fallas = {
-          "Problema Electrico": [
-              "Corto circuito",
-              "Relee dañado",
-              "Falso En señal",
-              "MicroSwitchs Dañado",
-              "Sensor Dañado",
-          ],
-          "Problema Hidraulico": [
-              "Fuga de Aceite",
-              "Electrovalvula dañada",
-              "Sellos dañado",
-              "Bomba dañada",
-          ],
-          "Problema Mecanico": [
-              "Guia de compuerta dañada",
-              "Cuña de eje dañada",
-          ],
-          "Problema con la Refrigeracion": [
-              "Chiller con problemas",
-              "Fuga de agua",
-              "Valvula dañada",
-          ],
-          "Proceso": [
-              "Burbuja de aire en bota",
-              "Rayado",
-              "Bota incompleta",
-          ],
-          "Problema Neumatico": [
-              "N/A",
-          ],
-      }
-
-      if "cat_principal_rusia" not in st.session_state:
-        st.session_state["cat_principal_rusia"] = "Problema Electrico"
-
-      cat_principal = st.selectbox(
-          "Selecciona el Área Principal",
-          list(arbol_fallas.keys()),
-          key="cat_principal_rusia",
-      )
-
-      sub_opciones = arbol_fallas.get(cat_principal, ["N/A"])
-      sub_detalle = st.selectbox(
-          f"Selecciona el detalle para: {cat_principal}",
-          sub_opciones,
-          key="sub_detalle_rusia",
-      )
-
       diagnostico = f"{cat_principal} -> {sub_detalle}"
-
       solucion = st.text_area("Acciones Realizadas / Solución")
       repuesto = st.selectbox(
-          "Requiere Repuestos o Insumo", ["No", "Si", "Fusible 6A", "Tornillo M10"]
+          "Requiere Repuestos or Insumo", ["No", "Si", "Fusible 6A", "Tornillo M10"]
       )
       observaciones = st.text_area("Observaciones")
 
@@ -451,35 +450,32 @@ elif menu == "Panel de Técnico":
 
     enviar = st.form_submit_button("Guardar Registro")
     if enviar:
-      if tipo_actividad == "Falla" and not diagnostico:
-        st.error("Por favor seleccione el tipo de problema.")
-      else:
-        nueva_fila = {
-            "Fecha": str(fecha),
-            "Departamento": "General",
-            "Turno": turno,
-            "Quien_Reporta": quien_reporta,
-            "Tipo_Actividad": tipo_actividad,
-            "Maquina": maquina,
-            "Seccion_Maquina": seccion,
-            "Campo_Trabajo": campo_t,
-            "Diagnostico": diagnostico,
-            "Solucion": solucion,
-            "Repuesto": repuesto,
-            "Hora_Inicial": h_ini,
-            "Hora_Final": h_fin,
-            "Observaciones": observaciones,
-            "Tiempo de Falla": "00:00:00",
-        }
-        df_nuevo = pd.DataFrame([nueva_fila])
-        df_nuevo = calcular_tiempo_falla(df_nuevo)
-        st.session_state["bitacora_general"] = pd.concat(
-            [st.session_state["bitacora_general"], df_nuevo],
-            ignore_index=True,
-        )
-        st.success(
-            f"¡Registro guardado con éxito bajo la categoría '{tipo_actividad}'!"
-        )
+      nueva_fila = {
+          "Fecha": str(fecha),
+          "Departamento": "General",
+          "Turno": turno,
+          "Quien_Reporta": quien_reporta,
+          "Tipo_Actividad": tipo_actividad,
+          "Maquina": maquina,
+          "Seccion_Maquina": seccion,
+          "Campo_Trabajo": campo_t,
+          "Diagnostico": diagnostico,
+          "Solucion": solucion,
+          "Repuesto": repuesto,
+          "Hora_Inicial": h_ini,
+          "Hora_Final": h_fin,
+          "Observaciones": observaciones,
+          "Tiempo de Falla": "00:00:00",
+      }
+      df_nuevo = pd.DataFrame([nueva_fila])
+      df_nuevo = calcular_tiempo_falla(df_nuevo)
+      st.session_state["bitacora_general"] = pd.concat(
+          [st.session_state["bitacora_general"], df_nuevo],
+          ignore_index=True,
+      )
+      st.success(
+          f"¡Registro guardado con éxito bajo la categoría '{tipo_actividad}'!"
+      )
 
 # 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
 elif menu == "Panel de Administración":
@@ -785,3 +781,4 @@ elif menu == "Panel de Administración":
       st.info("Sin datos numéricos suficientes para graficar.")
   else:
     st.info("Sin datos para mostrar en la gráfica.")
+      
