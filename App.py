@@ -351,7 +351,20 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      diagnostico = st.text_area("Diagnóstico de la falla")
+      # BOTONES FIJOS / OPCIONES PARA EL DIAGNÓSTICO DE LA FALLA
+      st.write("Diagnóstico / Tipo de Falla:")
+      diagnostico = st.radio(
+          "Seleccione el tipo de problema:",
+          [
+              "Problema Electrico",
+              "Problema mecanico",
+              "Problema Hidraulico",
+              "Problema Neumatico",
+              "Problema con la Refrigeracion",
+          ],
+          label_visibility="collapsed",
+      )
+
       solucion = st.text_area("Acciones Realizadas / Solución")
       repuesto = st.selectbox(
           "Requiere Repuestos o Insumo", ["No", "Si", "Fusible 6A", "Tornillo M10"]
@@ -392,7 +405,7 @@ elif menu == "Panel de Técnico":
     enviar = st.form_submit_button("Guardar Registro")
     if enviar:
       if tipo_actividad == "Falla" and not diagnostico:
-        st.error("Por favor escriba el diagnóstico de la falla.")
+        st.error("Por favor seleccione el tipo de problema.")
       else:
         nueva_fila = {
             "Fecha": str(fecha),
