@@ -374,9 +374,7 @@ elif menu == "Panel de Técnico":
 
       # Usaremos un selectbox estilizado o botones de opción distribuidos en columnas
       # Para garantizar el comportamiento tipo barra/botón interactivo en las 6 opciones:
-      sel_col1 = r1c1.radio(
-          "Fila 1", opciones_falla[0:1], label_visibility="collapsed"
-      )
+    
       sel_col2 = r1c2.radio(
           "Fila 2", opciones_falla[1:2], label_visibility="collapsed"
       )
