@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 import os
 import pandas as pd
@@ -14,18 +14,6 @@ st.set_page_config(
 
 st.title("🔧 Sistema Integral de Reportes C.H/7G")
 st.markdown("---")
-
-# MÓDULOS DEL SISTEMA
-menu = st.sidebar.selectbox(
-    "Selecciona el Módulo",
-    [
-        "Panel de Técnico",
-        "Panel de Administración",
-        "Diseño",
-        "Taller de Moldes",
-        "Gerencia",
-    ],
-)
 
 # ENLACE CSV DE GOOGLE SHEETS
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
@@ -192,6 +180,48 @@ if "formatos_deptos_avanzado" not in st.session_state:
       ],
   }
 
+# MÓDULOS Y SECCIÓN DE ÚLTIMOS REPORTES EN LA BARRA LATERAL (SIDEBAR)
+with st.sidebar:
+  menu = st.selectbox(
+      "Selecciona el Módulo",
+      [
+          "Panel de Técnico",
+          "Panel de Administración",
+          "Diseño",
+          "Taller de Moldes",
+          "Gerencia",
+      ],
+  )
+
+  st.markdown("---")
+  st.subheader("📅 Últimos Reportes")
+  st.caption("Registros de la última quincena (15 días)")
+
+  df_sidebar = st.session_state["bitacora_general"]
+  if not df_sidebar.empty and "Fecha" in df_sidebar.columns:
+    df_sidebar["_Fecha_Parsed"] = pd.to_datetime(
+        df_sidebar["Fecha"], errors="coerce"
+    )
+    limite_quincena = datetime.today() - timedelta(days=15)
+
+    df_quincena = df_sidebar[df_sidebar["_Fecha_Parsed"] >= limite_quincena]
+    df_quincena = df_quincena.sort_values(by="_Fecha_Parsed", ascending=False)
+
+    if not df_quincena.empty:
+      st.info(f"Se encontraron {len(df_quincena)} reportes recientes.")
+      for index, row in df_quincena.head(10).iterrows():
+        fecha_str = str(row.get("Fecha", "N/A"))
+        maq_str = str(row.get("Maquina", "N/A"))
+        diag_str = str(row.get("Diagnostico", "N/A"))
+        st.markdown(
+            f"🔹 **{fecha_str}** | *{maq_str}*  \n📝 {diag_str[:40]}..."
+        )
+        st.markdown("---")
+    else:
+      st.warning("No hay reportes registrados en los últimos 15 días.")
+  else:
+    st.info("Sin datos disponibles para filtrar.")
+
 # 1. DISEÑADOR DE FORMATOS
 if menu == "Diseño":
   st.header("🛠️ Diseñador y Gestión de Formatos")
@@ -256,15 +286,10 @@ elif menu in ["Taller de Moldes", "Gerencia"]:
 elif menu == "Panel de Técnico":
   st.header("📝 Registro de Reporte de Mantenimiento")
 
-  # 1. Fecha
   fecha = st.date_input("1. Fecha", value=datetime.today())
-
-  # 2. Turno
   turno = st.selectbox(
       "2. Turno", ["Turno Diurno", "Turno Nocturno"], key="turno_sel"
   )
-
-  # 3. Maquina
   maquina = st.selectbox(
       "3. Maquina",
       [
@@ -284,8 +309,6 @@ elif menu == "Panel de Técnico":
       ],
       key="maquina_sel",
   )
-
-  # 4. Quien Reporta
   quien_reporta = st.selectbox(
       "4. Quien Reporta",
       [
@@ -325,7 +348,6 @@ elif menu == "Panel de Técnico":
   h_fin = "N/A"
   observaciones = "N/A"
 
-  # 5. Diagnostico (Con Cascada Interactiva si es Falla)
   st.markdown("---")
   st.subheader("5. Diagnostico")
   if tipo_actividad == "Falla":
@@ -336,31 +358,16 @@ elif menu == "Panel de Técnico":
             "Falso En señal",
             "MicroSwitchs Dañado",
             "Sensor Dañado",
-            "Resistencia dañada",
-            "Contactor Dañado",
         ],
         "Problema Hidraulico": [
             "Fuga de Aceite",
             "Electrovalvula dañada",
             "Sellos dañado",
-            "Sellos de P. de Rotación Dañados",
-            "Sellos de P. de Enganche Dañados",
-            "Sellos de P. de V. De Iny. Dañados",
-            "Sellos de P. de Compuerta Dañados",
-            "Sellos de P. de Tapa Dañados",
-            "Sellos de P. de giro de Compuerta Dañados",
-            "sellos de Centro de Mesa Dañados",
             "Bomba dañada",
         ],
         "Problema Mecanico": [
             "Guia de compuerta dañada",
-            "Cuña de eje de compuerta dañada",
-            "Engranaje de Cremallera de compuerta dañado",
-            "Horquilla de eje de compuerta dañado",
-            "Pin de horquilla del eje de compuerta dañado",
-            "Pasador de P. de Rotación",
-            "Barra de P. de Rotacion dañada",
-            "Balinera de P. de Rotacion Dañada", 
+            "Cuña de eje dañada",
         ],
         "Problema con la Refrigeracion": [
             "Chiller con problemas",
@@ -393,12 +400,9 @@ elif menu == "Panel de Técnico":
         "Detalle de Diagnóstico", key="diag_libre_input"
     )
 
-  # 6. Acciones Realizadas o Solucion
   solucion = st.text_area(
       "6. Acciones Realizadas o Solucion", key="solucion_textarea"
   )
-
-  # 7. Portamoldes
   portamolde = st.selectbox(
       "7. Portamoldes",
       [
@@ -420,8 +424,6 @@ elif menu == "Panel de Técnico":
       ],
       key="portamolde_sel",
   )
-
-  # 8. Seccion de maquina
   seccion = st.selectbox(
       "8. Seccion de maquina",
       [
@@ -434,8 +436,6 @@ elif menu == "Panel de Técnico":
       ],
       key="seccion_sel",
   )
-
-  # 9. Campo de trabajo
   campo_t = st.selectbox(
       "9. Campo de trabajo",
       [
@@ -453,7 +453,6 @@ elif menu == "Panel de Técnico":
       key="campo_t_sel",
   )
 
-  # 10. Acompañamiento
   acompanamiento = st.multiselect(
       "10. Acompañamiento",
       [
@@ -473,7 +472,6 @@ elif menu == "Panel de Técnico":
       ", ".join(acompanamiento) if acompanamiento else "Ninguno"
   )
 
-  # 11. Requiere Repuesto
   req_repuesto = st.selectbox(
       "11. Requiere Repuesto", ["No", "Si"], key="req_rep_sel"
   )
@@ -501,15 +499,10 @@ elif menu == "Panel de Técnico":
   else:
     repuesto = "No"
 
-  # Hora inicial de falla
   h_ini = st.text_input("Hora inicial de falla (Ej. 08:00 AM)", key="h_ini_input")
-
-  # Hora Final de Falla
   h_fin = st.text_input(
       "Hora Final de Falla (Ej. 09:30 AM)", key="h_fin_input"
   )
-
-  # Observaciones
   observaciones = st.text_area("Observaciones", key="obs_textarea")
 
   st.markdown("---")
@@ -540,6 +533,7 @@ elif menu == "Panel de Técnico":
         ignore_index=True,
     )
     st.success("¡Registro guardado con éxito en orden y sincronizado!")
+    st.rerun()
 
 # 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
 elif menu == "Panel de Administración":
