@@ -354,14 +354,11 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # ESTRUCTURA DE MUÑECAS RUSAS DENTRO DEL FORMULARIO CON DICCIONARIO DIRECTO
+      # ESTRUCTURA DE MUÑECAS RUSAS DENTRO DEL FORMULARIO CON SESSION STATE
       st.markdown("---")
       st.write("🔧 **Diagnóstico y Selección en Cascada:**")
 
       arbol_fallas = {
-          "Seleccione un área principal...": [
-              "Seleccione primero un área..."
-          ],
           "Problema Electrico": [
               "Corto circuito",
               "Relee dañado",
@@ -394,18 +391,18 @@ elif menu == "Panel de Técnico":
           ],
       }
 
+      if "cat_principal_rusia" not in st.session_state:
+        st.session_state["cat_principal_rusia"] = "Problema Electrico"
+
       cat_principal = st.selectbox(
           "Selecciona el Área Principal",
           list(arbol_fallas.keys()),
           key="cat_principal_rusia",
       )
 
-      # Obtenemos las sub-opciones basándonos estrictamente en la selección actual
-      sub_opciones = arbol_fallas.get(
-          cat_principal, ["Seleccione primero un área..."]
-      )
+      sub_opciones = arbol_fallas.get(cat_principal, ["N/A"])
       sub_detalle = st.selectbox(
-          "Selecciona el detalle",
+          f"Selecciona el detalle para: {cat_principal}",
           sub_opciones,
           key="sub_detalle_rusia",
       )
@@ -454,13 +451,8 @@ elif menu == "Panel de Técnico":
 
     enviar = st.form_submit_button("Guardar Registro")
     if enviar:
-      if (
-          tipo_actividad == "Falla"
-          and cat_principal == "Seleccione un área principal..."
-      ):
-        st.error(
-            "Por favor seleccione una categoría y un detalle de falla válido."
-        )
+      if tipo_actividad == "Falla" and not diagnostico:
+        st.error("Por favor seleccione el tipo de problema.")
       else:
         nueva_fila = {
             "Fecha": str(fecha),
