@@ -351,17 +351,53 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # BOTONES FIJOS / OPCIONES PARA EL DIAGNÓSTICO DE LA FALLA
-      st.write("Diagnóstico / Tipo de Falla:")
+      # DIAGNÓSTICO EN CUADRÍCULA DE BOTONES (2 FILAS x 3 COLUMNAS)
+      st.markdown("---")
+      st.write("🔧 **Diagnóstico / Tipo de Falla:**")
+
+      # Inicializar estado del radio si no existe
+      if "diag_seleccionado" not in st.session_state:
+        st.session_state["diag_seleccionado"] = "Problema Electrico"
+
+      opciones_falla = [
+          "Problema Electrico",
+          "Problema mecanico",
+          "Problema Hidraulico",
+          "Problema Neumatico",
+          "Problema con la Refrigeracion",
+          "Proceso",
+      ]
+
+      # Estructura visual de 2 filas y 3 columnas con botones horizontales
+      r1c1, r1c2, r1c3 = st.columns(3)
+      r2c1, r2c2, r2c3 = st.columns(3)
+
+      # Usaremos un selectbox estilizado o botones de opción distribuidos en columnas
+      # Para garantizar el comportamiento tipo barra/botón interactivo en las 6 opciones:
+      sel_col1 = r1c1.radio(
+          "Fila 1", opciones_falla[0:1], label_visibility="collapsed"
+      )
+      sel_col2 = r1c2.radio(
+          "Fila 2", opciones_falla[1:2], label_visibility="collapsed"
+      )
+      sel_col3 = r1c3.radio(
+          "Fila 3", opciones_falla[2:3], label_visibility="collapsed"
+      )
+      sel_col4 = r2c1.radio(
+          "Fila 4", opciones_falla[3:4], label_visibility="collapsed"
+      )
+      sel_col5 = r2c2.radio(
+          "Fila 5", opciones_falla[4:5], label_visibility="collapsed"
+      )
+      sel_col6 = r2c3.radio(
+          "Fila 6", opciones_falla[5:6], label_visibility="collapsed"
+      )
+
+      # Selector unificado limpio tipo barra horizontal para evitar conflictos en el formulario
       diagnostico = st.radio(
           "Seleccione el tipo de problema:",
-          [
-              "Problema Electrico",
-              "Problema mecanico",
-              "Problema Hidraulico",
-              "Problema Neumatico",
-              "Problema con la Refrigeracion",
-          ],
+          opciones_falla,
+          horizontal=True,
           label_visibility="collapsed",
       )
 
@@ -434,7 +470,7 @@ elif menu == "Panel de Técnico":
             f"¡Registro guardado con éxito bajo la categoría '{tipo_actividad}'!"
         )
 
-# 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
+# 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁfICAS INTACTOS)
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control")
 
