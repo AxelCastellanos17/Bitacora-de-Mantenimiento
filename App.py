@@ -378,10 +378,7 @@ elif menu == "Panel de Técnico":
          
     
     
-      sel_col6 = r2c3.radio(
-          "Fila 6", opciones_falla[5:6], label_visibility="collapsed"
-      )
-
+ 
       # Selector unificado limpio tipo barra horizontal para evitar conflictos en el formulario
       diagnostico = st.radio(
           "Seleccione el tipo de problema:",
