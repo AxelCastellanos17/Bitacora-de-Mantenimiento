@@ -7,12 +7,12 @@ import requests
 import streamlit as st
 
 st.set_page_config(
-    page_title="Reporte de Fallas - Mantenimiento C.H",
+    page_title="Reporte de Fallas - Mantenimiento C.H (v9)",
     page_icon="🔧",
     layout="wide",
 )
 
-st.title("🔧 Sistema Integral de Reportes C.H/7G")
+st.title("🔧 Sistema Integral de Reportes C.H/7G — v9 Pantalla Dinámica")
 st.markdown("---")
 
 # ENLACE CSV DE GOOGLE SHEETS
@@ -180,7 +180,7 @@ if "formatos_deptos_avanzado" not in st.session_state:
       ],
   }
 
-# MÓDULOS Y SECCIÓN DE ÚLTIMOS REPORTES EN LA BARRA LATERAL (SIDEBAR)
+# BARRA LATERAL (SIDEBAR) CON MÓDULOS Y REPORTES DE LA QUINCENA
 with st.sidebar:
   menu = st.selectbox(
       "Selecciona el Módulo",
@@ -212,9 +212,14 @@ with st.sidebar:
       for index, row in df_quincena.head(10).iterrows():
         fecha_str = str(row.get("Fecha", "N/A"))
         maq_str = str(row.get("Maquina", "N/A"))
-        diag_str = str(row.get("Diagnostico", "N/A"))
+
+        # Mostramos la máquina y el diagnóstico exacto registrado
+        diag_val = str(row.get("Diagnostico", "N/A"))
+        if diag_val.strip() in ["", "nan", "None", "N/A"]:
+          diag_val = str(row.get("Tipo_Actividad", "Reporte de Mantenimiento"))
+
         st.markdown(
-            f"🔹 **{fecha_str}** | *{maq_str}*  \n📝 {diag_str[:40]}..."
+            f"🔹 **{fecha_str}** | *{maq_str}*  \n📝 {diag_val[:45]}..."
         )
         st.markdown("---")
     else:
@@ -282,14 +287,19 @@ elif menu in ["Taller de Moldes", "Gerencia"]:
   else:
     st.info("No hay campos adicionales configurados para este módulo.")
 
-# 2. PANEL DE TÉCNICO (REGISTRO DINÁMICO EN ORDEN ESTRICTO SOLICITADO)
+# 2. PANEL DE TÉCNICO (ORDEN EXACTO SOLICITADO Y PANTALLA DINÁMICA)
 elif menu == "Panel de Técnico":
   st.header("📝 Registro de Reporte de Mantenimiento")
 
+  # 1. Fecha
   fecha = st.date_input("1. Fecha", value=datetime.today())
+
+  # 2. Turno
   turno = st.selectbox(
       "2. Turno", ["Turno Diurno", "Turno Nocturno"], key="turno_sel"
   )
+
+  # 3. Maquina
   maquina = st.selectbox(
       "3. Maquina",
       [
@@ -309,6 +319,8 @@ elif menu == "Panel de Técnico":
       ],
       key="maquina_sel",
   )
+
+  # 4. Quien Reporta
   quien_reporta = st.selectbox(
       "4. Quien Reporta",
       [
@@ -348,6 +360,7 @@ elif menu == "Panel de Técnico":
   h_fin = "N/A"
   observaciones = "N/A"
 
+  # 5. Diagnostico (Con Cascada Interactiva en Pantalla Dinámica)
   st.markdown("---")
   st.subheader("5. Diagnostico")
   if tipo_actividad == "Falla":
@@ -400,9 +413,12 @@ elif menu == "Panel de Técnico":
         "Detalle de Diagnóstico", key="diag_libre_input"
     )
 
+  # 6. Acciones Realizadas o Solucion
   solucion = st.text_area(
       "6. Acciones Realizadas o Solucion", key="solucion_textarea"
   )
+
+  # 7. Portamoldes
   portamolde = st.selectbox(
       "7. Portamoldes",
       [
@@ -424,6 +440,8 @@ elif menu == "Panel de Técnico":
       ],
       key="portamolde_sel",
   )
+
+  # 8. Seccion de maquina
   seccion = st.selectbox(
       "8. Seccion de maquina",
       [
@@ -436,6 +454,8 @@ elif menu == "Panel de Técnico":
       ],
       key="seccion_sel",
   )
+
+  # 9. Campo de trabajo
   campo_t = st.selectbox(
       "9. Campo de trabajo",
       [
@@ -453,6 +473,7 @@ elif menu == "Panel de Técnico":
       key="campo_t_sel",
   )
 
+  # 10. Acompañamiento
   acompanamiento = st.multiselect(
       "10. Acompañamiento",
       [
@@ -472,6 +493,7 @@ elif menu == "Panel de Técnico":
       ", ".join(acompanamiento) if acompanamiento else "Ninguno"
   )
 
+  # 11. Requiere Repuesto
   req_repuesto = st.selectbox(
       "11. Requiere Repuesto", ["No", "Si"], key="req_rep_sel"
   )
@@ -499,10 +521,15 @@ elif menu == "Panel de Técnico":
   else:
     repuesto = "No"
 
+  # Hora inicial de falla
   h_ini = st.text_input("Hora inicial de falla (Ej. 08:00 AM)", key="h_ini_input")
+
+  # Hora Final de Falla
   h_fin = st.text_input(
       "Hora Final de Falla (Ej. 09:30 AM)", key="h_fin_input"
   )
+
+  # Observaciones
   observaciones = st.text_area("Observaciones", key="obs_textarea")
 
   st.markdown("---")
