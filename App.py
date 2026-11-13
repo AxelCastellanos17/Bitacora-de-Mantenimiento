@@ -15,8 +15,8 @@ st.set_page_config(
 st.title("🔧 Sistema Integral de Reportes C.H/7G — v9 Pantalla Dinámica")
 st.markdown("---")
 
-# ENLACE CSV DE GOOGLE SHEETS
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSH5iUS_32swVnDY1r7_1WcUagclXiaERsSplqKazMPSPeOfAN214d6DR5e1wLjLr_YO5HYJgB43F9P/pub?gid=1350106078&single=true&output=csv"
+# ENLACE DIRECTO DE GOOGLE SHEETS
+GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1p870f4kRED9ChxsOB3FaWSuAOfBdVGhAlAkb-Y9FpUY/export?format=csv"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyJKgLSeYOe3UOKBZ_4EWLZQzX4xMcK6sRHV_QokmjuVWxsmIBajGnlJ3kGpQm9NQq/exec"
 
 
@@ -87,11 +87,13 @@ def cargar_y_limpiar_datos(fuente):
         "tecnico": "Quien_Reporta",
         "diagnostico": "Diagnostico",
         "diagnóstico": "Diagnostico",
+        "diagnostico o trabajo asignado": "Diagnostico",
         "falla": "Diagnostico",
         "descripcion": "Diagnostico",
         "descripción de falla": "Diagnostico",
         "solucion": "Solucion",
         "solución": "Solucion",
+        "acciones realizadas": "Solucion",
         "tiempo de falla": "Tiempo de Falla",
         "tiempo muerto": "Tiempo de Falla",
         "hora inicial de falla": "Hora_Inicial",
@@ -151,7 +153,9 @@ if "bitacora_general" not in st.session_state:
     st.session_state["bitacora_general"] = cargar_y_limpiar_datos(
         GOOGLE_SHEET_CSV_URL
     )
-    st.session_state["fuente_activa"] = "Google Sheets (Sincronizado)"
+    st.session_state["fuente_activa"] = (
+        "Google Sheets Directo (Sincronizado)"
+    )
   else:
     st.session_state["bitacora_general"] = pd.DataFrame()
     st.session_state["fuente_activa"] = "Sin fuente configurada"
@@ -213,13 +217,17 @@ with st.sidebar:
         fecha_str = str(row.get("Fecha", "N/A"))
         maq_str = str(row.get("Maquina", "N/A"))
 
-        # Mostramos la máquina y el diagnóstico exacto registrado
-        diag_val = str(row.get("Diagnostico", "N/A"))
-        if diag_val.strip() in ["", "nan", "None", "N/A"]:
-          diag_val = str(row.get("Tipo_Actividad", "Reporte de Mantenimiento"))
+        # Extraemos y validamos el diagnóstico
+        diag_val = str(row.get("Diagnostico", "N/A")).strip()
+        if diag_val in ["", "nan", "None", "N/A"]:
+          tipo_act = str(row.get("Tipo_Actividad", "")).strip()
+          if tipo_act and tipo_act not in ["", "nan", "None", "N/A"]:
+            diag_val = tipo_act
+          else:
+            diag_val = "Mantenimiento General"
 
         st.markdown(
-            f"🔹 **{fecha_str}** | *{maq_str}*  \n📝 {diag_val[:45]}..."
+            f"🔹 **{fecha_str}** | *{maq_str}*  \n📝 {diag_val[:45]}"
         )
         st.markdown("---")
     else:
