@@ -250,7 +250,7 @@ elif menu in ["Taller de Moldes", "Gerencia"]:
   else:
     st.info("No hay campos adicionales configurados para este módulo.")
 
-# 2. PANEL DE TÉCNICO (REGISTRO DINÁMICO)
+# 2. PANEL DE TÉCNICO (REGISTRO DINÁMICO 100% FUERA DE FORMULARIO)
 elif menu == "Panel de Técnico":
   st.header("📝 Registro de Reporte de Mantenimiento")
 
@@ -276,7 +276,7 @@ elif menu == "Panel de Técnico":
 
   st.markdown("---")
 
-  # SELECTOR MAESTRO DE TIPO DE ACTIVIDAD
+  # 4. SELECTOR MAESTRO DE TIPO DE ACTIVIDAD
   tipo_actividad = st.selectbox(
       "4. Seleccione el Tipo de Actividad",
       [
@@ -288,11 +288,15 @@ elif menu == "Panel de Técnico":
       key="tipo_actividad_sel",
   )
 
-  # ----------------------------------------------------
-  # SELECCIÓN EN CASCADA (FUERA DEL FORMULARIO)
-  # ----------------------------------------------------
-  cat_principal = "N/A"
-  sub_detalle = "N/A"
+  maquina = "N/A"
+  seccion = "N/A"
+  campo_t = "N/A"
+  h_ini = "N/A"
+  h_fin = "N/A"
+  diagnostico = "N/A"
+  solucion = "N/A"
+  repuesto = "N/A"
+  observaciones = "N/A"
 
   if tipo_actividad == "Falla":
     st.markdown("---")
@@ -344,81 +348,15 @@ elif menu == "Panel de Técnico":
         key=f"sub_detalle_{cat_principal}",
     )
 
-  with st.form("form_actividad_dinamico"):
-    maquina = "N/A"
-    seccion = "N/A"
-    campo_t = "N/A"
-    h_ini = "N/A"
-    h_fin = "N/A"
-    diagnostico = "N/A"
-    solucion = "N/A"
-    repuesto = "N/A"
-    observaciones = "N/A"
+    diagnostico = f"{cat_principal} -> {sub_detalle}"
 
-    if tipo_actividad == "Falla":
-      st.subheader("📋 Formulario de Reporte de Falla")
-      c3, c4 = st.columns(2)
-      with c3:
-        maquina = st.selectbox(
-            "Máquina",
-            [
-                "Todas Las Maquinas",
-                "Maquina 1",
-                "Maquina 6",
-                "Maquina 8",
-                "Maquina 9",
-                "Maquina 10",
-                "Maquina 11",
-                "Maquina 12",
-                "Maquina 13",
-                "Moldes",
-                "Trabajo en Edificio",
-                "Molinos C.H",
-                "Molino 7G",
-            ],
-        )
-        seccion = st.selectbox(
-            "Sección de Máquina",
-            [
-                "Inyector",
-                "Mesa",
-                "Central Hidraulica",
-                "Gabinete Electrico",
-                "Bloque de Prensado",
-                "N/A",
-            ],
-        )
-      with c4:
-        campo_t = st.selectbox(
-            "Campo de Trabajo",
-            [
-                "Mantenimiento Preventivo",
-                "Corte de Energia",
-                "Electrico",
-                "Mecanico",
-                "Hidraulico",
-                "Refrigeración",
-                "Proceso",
-                "Neumatico",
-                "Problemas Con Vacio",
-                "N/A",
-            ],
-        )
-        h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
-        h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
-
-      diagnostico = f"{cat_principal} -> {sub_detalle}"
-      solucion = st.text_area("Acciones Realizadas / Solución")
-      repuesto = st.selectbox(
-          "Requiere Repuestos or Insumo", ["No", "Si", "Fusible 6A", "Tornillo M10"]
-      )
-      observaciones = st.text_area("Observaciones")
-
-    elif tipo_actividad == "Ajuste de parámetros":
-      st.subheader("⚙️ Formulario de Ajuste de Parámetros")
+    st.subheader("📋 Formulario de Reporte de Falla")
+    c3, c4 = st.columns(2)
+    with c3:
       maquina = st.selectbox(
-          "Máquina a Ajustar",
+          "Máquina",
           [
+              "Todas Las Maquinas",
               "Maquina 1",
               "Maquina 6",
               "Maquina 8",
@@ -427,55 +365,110 @@ elif menu == "Panel de Técnico":
               "Maquina 11",
               "Maquina 12",
               "Maquina 13",
+              "Moldes",
+              "Trabajo en Edificio",
+              "Molinos C.H",
+              "Molino 7G",
           ],
       )
-      diag_param = st.text_area("Detalle de los parámetros ajustados")
-      solucion = st.text_area("Resultado del ajuste")
-      diagnostico = f"Ajuste de parámetros: {diag_param}"
-
-    elif tipo_actividad == "Trabajo asignado":
-      st.subheader("📌 Formulario de Trabajo Asignado")
-      diag_trabajo = st.text_area("Descripción del trabajo asignado")
-      solucion = st.text_area("Estado final del trabajo")
-      diagnostico = f"Trabajo asignado: {diag_trabajo}"
-
-    elif tipo_actividad == "Cambio de molde":
-      st.subheader("🔄 Formulario de Cambio de Molde")
-      maquina = st.selectbox(
-          "Máquina", ["Maquina 1", "Maquina 6", "Maquina 8", "Maquina 9"]
+      seccion = st.selectbox(
+          "Sección de Máquina",
+          [
+              "Inyector",
+              "Mesa",
+              "Central Hidraulica",
+              "Gabinete Electrico",
+              "Bloque de Prensado",
+              "N/A",
+          ],
       )
-      diag_molde = st.text_area("Molde Retirado / Molde Instalado")
-      solucion = st.text_area("Observaciones del cambio de molde")
-      diagnostico = f"Cambio de molde: {diag_molde}"
+    with c4:
+      campo_t = st.selectbox(
+          "Campo de Trabajo",
+          [
+              "Mantenimiento Preventivo",
+              "Corte de Energia",
+              "Electrico",
+              "Mecanico",
+              "Hidraulico",
+              "Refrigeración",
+              "Proceso",
+              "Neumatico",
+              "Problemas Con Vacio",
+              "N/A",
+          ],
+      )
+      h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
+      h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-    enviar = st.form_submit_button("Guardar Registro")
-    if enviar:
-      nueva_fila = {
-          "Fecha": str(fecha),
-          "Departamento": "General",
-          "Turno": turno,
-          "Quien_Reporta": quien_reporta,
-          "Tipo_Actividad": tipo_actividad,
-          "Maquina": maquina,
-          "Seccion_Maquina": seccion,
-          "Campo_Trabajo": campo_t,
-          "Diagnostico": diagnostico,
-          "Solucion": solucion,
-          "Repuesto": repuesto,
-          "Hora_Inicial": h_ini,
-          "Hora_Final": h_fin,
-          "Observaciones": observaciones,
-          "Tiempo de Falla": "00:00:00",
-      }
-      df_nuevo = pd.DataFrame([nueva_fila])
-      df_nuevo = calcular_tiempo_falla(df_nuevo)
-      st.session_state["bitacora_general"] = pd.concat(
-          [st.session_state["bitacora_general"], df_nuevo],
-          ignore_index=True,
-      )
-      st.success(
-          f"¡Registro guardado con éxito bajo la categoría '{tipo_actividad}'!"
-      )
+    solucion = st.text_area("Acciones Realizadas / Solución")
+    repuesto = st.selectbox(
+        "Requiere Repuestos o Insumo", ["No", "Si", "Fusible 6A", "Tornillo M10"]
+    )
+    observaciones = st.text_area("Observaciones")
+
+  elif tipo_actividad == "Ajuste de parámetros":
+    st.subheader("⚙️ Formulario de Ajuste de Parámetros")
+    maquina = st.selectbox(
+        "Máquina a Ajustar",
+        [
+            "Maquina 1",
+            "Maquina 6",
+            "Maquina 8",
+            "Maquina 9",
+            "Maquina 10",
+            "Maquina 11",
+            "Maquina 12",
+            "Maquina 13",
+        ],
+    )
+    diag_param = st.text_area("Detalle de los parámetros ajustados")
+    solucion = st.text_area("Resultado del ajuste")
+    diagnostico = f"Ajuste de parámetros: {diag_param}"
+
+  elif tipo_actividad == "Trabajo asignado":
+    st.subheader("📌 Formulario de Trabajo Asignado")
+    diag_trabajo = st.text_area("Descripción del trabajo asignado")
+    solucion = st.text_area("Estado final del trabajo")
+    diagnostico = f"Trabajo asignado: {diag_trabajo}"
+
+  elif tipo_actividad == "Cambio de molde":
+    st.subheader("🔄 Formulario de Cambio de Molde")
+    maquina = st.selectbox(
+        "Máquina", ["Maquina 1", "Maquina 6", "Maquina 8", "Maquina 9"]
+    )
+    diag_molde = st.text_area("Molde Retirado / Molde Instalado")
+    solucion = st.text_area("Observaciones del cambio de molde")
+    diagnostico = f"Cambio de molde: {diag_molde}"
+
+  st.markdown("---")
+  if st.button("Guardar Registro", type="primary", use_container_width=True):
+    nueva_fila = {
+        "Fecha": str(fecha),
+        "Departamento": "General",
+        "Turno": turno,
+        "Quien_Reporta": quien_reporta,
+        "Tipo_Actividad": tipo_actividad,
+        "Maquina": maquina,
+        "Seccion_Maquina": seccion,
+        "Campo_Trabajo": campo_t,
+        "Diagnostico": diagnostico,
+        "Solucion": solucion,
+        "Repuesto": repuesto,
+        "Hora_Inicial": h_ini,
+        "Hora_Final": h_fin,
+        "Observaciones": observaciones,
+        "Tiempo de Falla": "00:00:00",
+    }
+    df_nuevo = pd.DataFrame([nueva_fila])
+    df_nuevo = calcular_tiempo_falla(df_nuevo)
+    st.session_state["bitacora_general"] = pd.concat(
+        [st.session_state["bitacora_general"], df_nuevo],
+        ignore_index=True,
+    )
+    st.success(
+        f"¡Registro guardado con éxito bajo la categoría '{tipo_actividad}'!"
+    )
 
 # 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
 elif menu == "Panel de Administración":
@@ -781,4 +774,3 @@ elif menu == "Panel de Administración":
       st.info("Sin datos numéricos suficientes para graficar.")
   else:
     st.info("Sin datos para mostrar en la gráfica.")
-      
