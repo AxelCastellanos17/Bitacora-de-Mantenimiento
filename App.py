@@ -351,9 +351,13 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # MENÚ DESPLEGABLE DINÁMICO DE DIAGNÓSTICO Y SUB-OPCIONES
+      # DIAGNÓSTICO EN CUADRÍCULA DE BOTONES (2 FILAS x 3 COLUMNAS)
       st.markdown("---")
       st.write("🔧 **Diagnóstico / Tipo de Falla:**")
+
+      # Inicializar estado del radio si no existe
+      if "diag_seleccionado" not in st.session_state:
+        st.session_state["diag_seleccionado"] = "Problema Electrico"
 
       opciones_falla = [
           "Problema Electrico",
@@ -364,61 +368,38 @@ elif menu == "Panel de Técnico":
           "Proceso",
       ]
 
-      cat_principal = st.selectbox(
-          "Seleccione el tipo de problema:",
-          opciones_falla,
-          key="cat_principal_select",
+      # Estructura visual de 2 filas y 3 columnas con botones horizontales
+      r1c1, r1c2, r1c3 = st.columns(3)
+      r2c1, r2c2, r2c3 = st.columns(3)
+
+      # Usaremos un selectbox estilizado o botones de opción distribuidos en columnas
+      # Para garantizar el comportamiento tipo barra/botón interactivo en las 6 opciones:
+      sel_col1 = r1c1.radio(
+          "Fila 1", opciones_falla[0:1], label_visibility="collapsed"
+      )
+      sel_col2 = r1c2.radio(
+          "Fila 2", opciones_falla[1:2], label_visibility="collapsed"
+      )
+      sel_col3 = r1c3.radio(
+          "Fila 3", opciones_falla[2:3], label_visibility="collapsed"
+      )
+      sel_col4 = r2c1.radio(
+          "Fila 4", opciones_falla[3:4], label_visibility="collapsed"
+      )
+      sel_col5 = r2c2.radio(
+          "Fila 5", opciones_falla[4:5], label_visibility="collapsed"
+      )
+      sel_col6 = r2c3.radio(
+          "Fila 6", opciones_falla[5:6], label_visibility="collapsed"
       )
 
-      # SUB-OPCIONES DESPLEGABLES EXCLUSIVAS
-      sub_detalle = "N/A"
-
-      if cat_principal == "Problema Electrico":
-        sub_detalle = st.selectbox(
-            "Detalle de Falla Eléctrica",
-            [
-                "Corto circuito",
-                "Relee dañado",
-                "Falso En señal",
-                "MicroSwitchs Dañado",
-                "Sensor Dañado",
-            ],
-            key="sub_elec_sel",
-        )
-      elif cat_principal == "Problema Hidraulico":
-        sub_detalle = st.selectbox(
-            "Detalle de Falla Hidráulica",
-            [
-                "Fuga de Aceite",
-                "Electrovalvula dañada",
-                "sellos dañado",
-                "bomba dañada",
-            ],
-            key="sub_hid_sel",
-        )
-      elif cat_principal == "Problema con la Refrigeracion":
-        sub_detalle = st.selectbox(
-            "Detalle de Falla de Refrigeración",
-            ["Chiller con problemas", "fuga de agua", "valvula dañada"],
-            key="sub_ref_sel",
-        )
-      elif cat_principal == "Proceso":
-        sub_detalle = st.selectbox(
-            "Detalle de Proceso",
-            ["Burbuja de aire en bota", "Rayado", "Bota incompleta"],
-            key="sub_proc_sel",
-        )
-      elif cat_principal == "Problema mecanico":
-        sub_detalle = st.selectbox(
-            "Detalle de Falla Mecánica",
-            ["Guia de compuerta dañada", "cuña de eje dañada"],
-            key="sub_mec_sel",
-        )
-      else:
-        sub_detalle = "N/A"
-
-      # Consolidar diagnóstico final con categoría y su sub-detalle exclusivo
-      diagnostico = f"{cat_principal} -> {sub_detalle}"
+      # Selector unificado limpio tipo barra horizontal para evitar conflictos en el formulario
+      diagnostico = st.radio(
+          "Seleccione el tipo de problema:",
+          opciones_falla,
+          horizontal=True,
+          label_visibility="collapsed",
+      )
 
       solucion = st.text_area("Acciones Realizadas / Solución")
       repuesto = st.selectbox(
@@ -489,7 +470,7 @@ elif menu == "Panel de Técnico":
             f"¡Registro guardado con éxito bajo la categoría '{tipo_actividad}'!"
         )
 
-# 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
+# 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁfICAS INTACTOS)
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control")
 
@@ -793,3 +774,4 @@ elif menu == "Panel de Administración":
       st.info("Sin datos numéricos suficientes para graficar.")
   else:
     st.info("Sin datos para mostrar en la gráfica.")
+      
