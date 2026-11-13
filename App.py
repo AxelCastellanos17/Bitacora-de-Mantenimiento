@@ -351,55 +351,61 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # DIAGNÓSTICO EN CUADRÍCULA DE BOTONES (2 FILAS x 3 COLUMNAS)
+      # ESTRUCTURA DE MUÑECAS RUSAS (JERARQUÍA DE FALLAS)
       st.markdown("---")
-      st.write("🔧 **Diagnóstico / Tipo de Falla:**")
+      st.write("🔧 **Diagnóstico y Selección en Cascada:**")
 
-      # Inicializar estado del radio si no existe
-      if "diag_seleccionado" not in st.session_state:
-        st.session_state["diag_seleccionado"] = "Problema Electrico"
+      # Diccionario de la estructura anidada (Matrioshka)
+      arbol_fallas = {
+          "Problema Electrico": [
+              "Corto circuito",
+              "Relee dañado",
+              "Falso En señal",
+              "MicroSwitchs Dañado",
+              "Sensor Dañado",
+          ],
+          "Problema Mecanico": [
+              "Guia de compuerta dañada",
+              "Cuña de eje dañada",
+          ],
+          "Problema Hidraulico": [
+              "Fuga de Aceite",
+              "Electrovalvula dañada",
+              "Sellos dañado",
+              "Bomba dañada",
+          ],
+          "Problema con la Refrigeracion": [
+              "Chiller con problemas",
+              "Fuga de agua",
+              "Valvula dañada",
+          ],
+          "Proceso": [
+              "Burbuja de aire en bota",
+              "Rayado",
+              "Bota incompleta",
+          ],
+          "Problema Neumatico": [
+              "N/A",
+          ],
+      }
 
-      opciones_falla = [
-          "Problema Electrico",
-          "Problema mecanico",
-          "Problema Hidraulico",
-          "Problema Neumatico",
-          "Problema con la Refrigeracion",
-          "Proceso",
-      ]
-
-      # Estructura visual de 2 filas y 3 columnas con botones horizontales
-      r1c1, r1c2, r1c3 = st.columns(3)
-      r2c1, r2c2, r2c3 = st.columns(3)
-
-      # Usaremos un selectbox estilizado o botones de opción distribuidos en columnas
-      # Para garantizar el comportamiento tipo barra/botón interactivo en las 6 opciones:
-      sel_col1 = r1c1.radio(
-          "Fila 1", opciones_falla[0:1], label_visibility="collapsed"
-      )
-      sel_col2 = r1c2.radio(
-          "Fila 2", opciones_falla[1:2], label_visibility="collapsed"
-      )
-      sel_col3 = r1c3.radio(
-          "Fila 3", opciones_falla[2:3], label_visibility="collapsed"
-      )
-      sel_col4 = r2c1.radio(
-          "Fila 4", opciones_falla[3:4], label_visibility="collapsed"
-      )
-      sel_col5 = r2c2.radio(
-          "Fila 5", opciones_falla[4:5], label_visibility="collapsed"
-      )
-      sel_col6 = r2c3.radio(
-          "Fila 6", opciones_falla[5:6], label_visibility="collapsed"
+      # Primer nivel (Muñeca exterior)
+      cat_principal = st.selectbox(
+          "Selecciona el Área Principal",
+          list(arbol_fallas.keys()),
+          key="cat_principal_rusia",
       )
 
-      # Selector unificado limpio tipo barra horizontal para evitar conflictos en el formulario
-      diagnostico = st.radio(
-          "Seleccione el tipo de problema:",
-          opciones_falla,
-          horizontal=True,
-          label_visibility="collapsed",
+      # Segundo nivel (Muñeca interior que se despliega según la selección superior)
+      sub_opciones = arbol_fallas.get(cat_principal, ["N/A"])
+      sub_detalle = st.selectbox(
+          f"Selecciona el detalle para: {cat_principal}",
+          sub_opciones,
+          key="sub_detalle_rusia",
       )
+
+      # Consolidar diagnóstico final enlazado
+      diagnostico = f"{cat_principal} -> {sub_detalle}"
 
       solucion = st.text_area("Acciones Realizadas / Solución")
       repuesto = st.selectbox(
@@ -470,7 +476,7 @@ elif menu == "Panel de Técnico":
             f"¡Registro guardado con éxito bajo la categoría '{tipo_actividad}'!"
         )
 
-# 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁfICAS INTACTOS)
+# 3. PANEL DE ADMINISTRACIÓN (FILTROS, MATRIZ Y GRÁFICAS INTACTOS)
 elif menu == "Panel de Administración":
   st.header("📊 Panel de Administración y Control")
 
@@ -724,7 +730,9 @@ elif menu == "Panel de Administración":
   if not tabla_numerica.empty:
     df_grafica = tabla_numerica.drop(index=["Total General"], errors="ignore")
     if "Total General" in df_grafica.columns:
-      df_grafica = df_grafica.drop(columns=["Total General"], errors="ignore")
+      df_grafica = df_gradeica = df_grafica.drop(
+          columns=["Total General"], errors="ignore"
+      )
 
     if col_valor != "Horas_Decimales":
       df_grafica = df_grafica / 3600
@@ -774,4 +782,3 @@ elif menu == "Panel de Administración":
       st.info("Sin datos numéricos suficientes para graficar.")
   else:
     st.info("Sin datos para mostrar en la gráfica.")
-      
