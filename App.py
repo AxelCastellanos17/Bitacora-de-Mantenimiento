@@ -288,13 +288,69 @@ elif menu == "Panel de Técnico":
       key="tipo_actividad_sel",
   )
 
+  # LÓGICA EN CASCADA CON ESTADO MUERTO / EN ESPERA INICIAL
+  cat_principal = "N/A"
+  sub_detalle = "N/A"
+
+  if tipo_actividad == "Falla":
+    st.markdown("---")
+    st.write("🔧 **Diagnóstico y Selección en Cascada:**")
+
+    arbol_fallas = {
+        "-- Seleccione un Área Principal --": [
+            "-- Seleccione primero un área --"
+        ],
+        "Problema Electrico": [
+            "Corto circuito",
+            "Relee dañado",
+            "Falso En señal",
+            "MicroSwitchs Dañado",
+            "Sensor Dañado",
+        ],
+        "Problema Hidraulico": [
+            "Fuga de Aceite",
+            "Electrovalvula dañada",
+            "Sellos dañado",
+            "Bomba dañada",
+        ],
+        "Problema Mecanico": [
+            "Guia de compuerta dañada",
+            "Cuña de eje dañada",
+        ],
+        "Problema con la Refrigeracion": [
+            "Chiller con problemas",
+            "Fuga de agua",
+            "Valvula dañada",
+        ],
+        "Proceso": [
+            "Burbuja de aire en bota",
+            "Rayado",
+            "Bota incompleta",
+        ],
+        "Problema Neumatico": [
+            "N/A",
+        ],
+    }
+
+    cat_principal = st.selectbox(
+        "Selecciona el Área Principal",
+        list(arbol_fallas.keys()),
+        key="cat_principal_rusia",
+    )
+
+    sub_opciones = arbol_fallas.get(cat_principal, ["N/A"])
+    sub_detalle = st.selectbox(
+        f"Selecciona el detalle para: {cat_principal}",
+        sub_opciones,
+        key=f"detalle_{cat_principal}",
+    )
+
   with st.form("form_actividad_dinamico"):
     maquina = "N/A"
     seccion = "N/A"
     campo_t = "N/A"
     h_ini = "N/A"
     h_fin = "N/A"
-    diagnostico = "N/A"
     solucion = "N/A"
     repuesto = "N/A"
     observaciones = "N/A"
@@ -351,60 +407,6 @@ elif menu == "Panel de Técnico":
         h_ini = st.text_input("Hora Inicial de Falla (Ej. 08:00 AM)")
         h_fin = st.text_input("Hora Final de Falla (Ej. 09:30 AM)")
 
-      # ESTRUCTURA DE MUÑECAS RUSAS (JERARQUÍA DINÁMICA CORREGIDA)
-      st.markdown("---")
-      st.write("🔧 **Diagnóstico y Selección en Cascada:**")
-
-      arbol_fallas = {
-          "Problema Electrico": [
-              "Corto circuito",
-              "Relee dañado",
-              "Falso En señal",
-              "MicroSwitchs Dañado",
-              "Sensor Dañado",
-          ],
-          "Problema Hidraulico": [
-              "Fuga de Aceite",
-              "Electrovalvula dañada",
-              "Sellos dañado",
-              "Bomba dañada",
-          ],
-          "Problema Mecanico": [
-              "Guia de compuerta dañada",
-              "Cuña de eje dañada",
-          ],
-          "Problema con la Refrigeracion": [
-              "Chiller con problemas",
-              "Fuga de agua",
-              "Valvula dañada",
-          ],
-          "Proceso": [
-              "Burbuja de aire en bota",
-              "Rayado",
-              "Bota incompleta",
-          ],
-          "Problema Neumatico": [
-              "N/A",
-          ],
-      }
-
-      cat_principal = st.selectbox(
-          "Selecciona el Área Principal",
-          list(arbol_fallas.keys()),
-          key="cat_principal_rusia",
-      )
-
-      sub_opciones = arbol_fallas.get(cat_principal, ["N/A"])
-      
-      # Clave y etiqueta dinámicas para limpiar caché de Streamlit al cambiar de área
-      sub_detalle = st.selectbox(
-          f"Selecciona el detalle para: {cat_principal}",
-          sub_opciones,
-          key=f"detalle_{cat_principal}",
-      )
-
-      diagnostico = f"{cat_principal} -> {sub_detalle}"
-
       solucion = st.text_area("Acciones Realizadas / Solución")
       repuesto = st.selectbox(
           "Requiere Repuestos o Insumo", ["No", "Si", "Fusible 6A", "Tornillo M10"]
@@ -426,26 +428,39 @@ elif menu == "Panel de Técnico":
               "Maquina 13",
           ],
       )
-      diagnostico = st.text_area("Detalle de los parámetros ajustados")
+      diagnostico_param = st.text_area("Detalle de los parámetros ajustados")
       solucion = st.text_area("Resultado del ajuste")
+      cat_principal, sub_detalle = "Ajuste de parámetros", diagnostico_param
 
     elif tipo_actividad == "Trabajo asignado":
       st.subheader("📌 Formulario de Trabajo Asignado")
-      diagnostico = st.text_area("Descripción del trabajo asignado")
+      diag_trabajo = st.text_area("Descripción del trabajo asignado")
       solucion = st.text_area("Estado final del trabajo")
+      cat_principal, sub_detalle = "Trabajo asignado", diag_trabajo
 
     elif tipo_actividad == "Cambio de molde":
       st.subheader("🔄 Formulario de Cambio de Molde")
       maquina = st.selectbox(
           "Máquina", ["Maquina 1", "Maquina 6", "Maquina 8", "Maquina 9"]
       )
-      diagnostico = st.text_area("Molde Retirado / Molde Instalado")
+      diag_molde = st.text_area("Molde Retirado / Molde Instalado")
       solucion = st.text_area("Observaciones del cambio de molde")
+      cat_principal, sub_detalle = "Cambio de molde", diag_molde
 
     enviar = st.form_submit_button("Guardar Registro")
     if enviar:
-      if tipo_actividad == "Falla" and not diagnostico:
-        st.error("Por favor seleccione el tipo de problema.")
+      if tipo_actividad == "Falla":
+        diagnostico_final = f"{cat_principal} -> {sub_detalle}"
+      else:
+        diagnostico_final = f"{cat_principal}: {sub_detalle}"
+
+      if tipo_actividad == "Falla" and (
+          cat_principal == "-- Seleccione un Área Principal --"
+          or sub_detalle == "-- Seleccione primero un área --"
+      ):
+        st.error(
+            "Por favor seleccione una categoría y un detalle de falla válido."
+        )
       else:
         nueva_fila = {
             "Fecha": str(fecha),
@@ -456,7 +471,7 @@ elif menu == "Panel de Técnico":
             "Maquina": maquina,
             "Seccion_Maquina": seccion,
             "Campo_Trabajo": campo_t,
-            "Diagnostico": diagnostico,
+            "Diagnostico": diagnostico_final,
             "Solucion": solucion,
             "Repuesto": repuesto,
             "Hora_Inicial": h_ini,
